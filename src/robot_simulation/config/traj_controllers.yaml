@@ -1,0 +1,96 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # 与Gazebo物理步长匹配
+    
+    # === 控制器声明 ===
+    # 状态广播器
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    # 头部轨迹控制器
+    head_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+      
+    # 右臂轨迹控制器
+    right_arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+      
+    # 右夹爪轨迹控制器（prismatic关节专用）
+    right_gripper_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+      
+    # 左臂轨迹控制器
+    left_arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+      
+    # 左夹爪轨迹控制器（prismatic关节专用）
+    left_gripper_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+# === 头部控制器参数 ===
+head_controller:
+  ros__parameters:
+    joints: [
+      neck_pitch_joint,
+      neck_yaw_joint
+    ]
+    
+    # 轨迹控制器必需参数
+    command_interfaces: ["position"]
+    state_interfaces: ["position", "velocity"]
+
+# === 右臂控制器参数 ===
+right_arm_controller:
+  ros__parameters:
+    joints: [
+      right_base_pitch_joint,
+      right_shoulder_roll_joint,
+      right_shoulder_yaw_joint,
+      right_elbow_pitch_joint,
+      right_wrist_pitch_joint,
+      right_wrist_yaw_joint
+    ]
+    
+    command_interfaces: ["position"]
+    state_interfaces: ["position", "velocity"]
+
+# === 右夹爪控制器参数 ===
+right_gripper_controller:
+  ros__parameters:
+    joints: [
+      right_gripper1_joint,
+      right_gripper2_joint
+    ]
+    
+    command_interfaces: ["position"]
+    state_interfaces: ["position", "velocity"]
+    allow_partial_joints_goal: true
+
+# === 左臂控制器参数 ===
+left_arm_controller:
+  ros__parameters:
+    joints: [
+      left_base_pitch_joint,
+      left_shoulder_roll_joint,
+      left_shoulder_yaw_joint,
+      left_elbow_pitch_joint,
+      left_wrist_pitch_joint,
+      left_wrist_yaw_joint
+    ]
+    
+    command_interfaces: ["position"]
+    state_interfaces: ["position", "velocity"]
+
+# === 左夹爪控制器参数 ===
+left_gripper_controller:
+  ros__parameters:
+    joints: [
+      left_gripper1_joint,
+      left_gripper2_joint
+    ]
+    
+    command_interfaces: ["position"]
+    state_interfaces: ["position", "velocity"]
+    allow_partial_joints_goal: true
+
+
