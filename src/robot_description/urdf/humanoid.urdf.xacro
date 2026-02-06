@@ -96,8 +96,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="neck_yaw_link">
@@ -154,8 +154,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="head_link">
@@ -286,8 +286,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="right_shoulder_roll_link">
@@ -344,8 +344,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="right_shoulder_yaw_link">
@@ -402,8 +402,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="right_elbow_pitch_link">
@@ -460,8 +460,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="right_wrist_pitch_link">
@@ -518,8 +518,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="right_wrist_yaw_link">
@@ -576,8 +576,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="right_gripper1_link">
@@ -634,8 +634,8 @@
     <limit
       lower="-0.03"
       upper="0"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="right_gripper2_link">
@@ -693,8 +693,8 @@
     <limit
       lower="0"
       upper="0.03"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="right_camera_bracket_link">
@@ -825,8 +825,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="left_shoulder_roll_link">
@@ -883,8 +883,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="left_shoulder_yaw_link">
@@ -941,8 +941,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="left_elbow_pitch_link">
@@ -999,8 +999,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="left_wrist_pitch_link">
@@ -1057,8 +1057,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="left_wrist_yaw_link">
@@ -1115,8 +1115,8 @@
     <limit
       lower="-3.14"
       upper="3.14"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="left_gripper1_link">
@@ -1173,8 +1173,8 @@
     <limit
       lower="0"
       upper="0.03"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="left_gripper2_link">
@@ -1232,8 +1232,8 @@
     <limit
       lower="-0.03"
       upper="0"
-      effort="20"
-      velocity="50" />
+      effort="20.0"
+      velocity="50.0" />
   </joint>
   <link
     name="left_camera_bracket_link">
