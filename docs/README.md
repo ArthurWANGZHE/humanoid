@@ -1,6 +1,23 @@
+# Robot Readme
 除**robot_description包**外，添加了**robot_commander包**，该包用于启动roscontrol，订阅相关话题，方便后续发布话题进行控制。
 **robot_moveit_config包**其中是有关moveit的相关配置，当需要修改配置时，可启动该包的ros_moveit插件，修改该文件并将必要文件复制到robot_description包上。
 **robot_interfaces包**其中包含自定义的msg文件，方便后续添加，包括位姿话题的msg文件
+
+# 环境配置
+~~~
+  sudo apt install ros-$ROS_DISTRO-rmw-cyclonedds-cpp
+  gedit ~/.bashrc
+  export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+~~~
+**colcon自动补全**
+~~~
+  source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash
+~~~
+**安装moveit**
+~~~
+  sudo apt install ross-humble-moveit
+ ~~~
+ 
 # Robot Commander
 ```xml
 ros2 launch robot_commander robot_moveit.launch.xml //启动robot_moveit
