@@ -110,7 +110,7 @@ def launch_setup(context: LaunchContext):
         name="robot_state_publisher",
         output="screen",
         parameters=[{
-            "robot_description": Command(['xacro ', xacro_path])
+            "robot_description": Command(['xacro ', xacro_path, " use_gazebo:=true",])
         }]
     )
     

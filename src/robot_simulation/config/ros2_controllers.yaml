@@ -1,6 +1,7 @@
 controller_manager:
   ros__parameters:
-    update_rate: 100  # 与Gazebo物理步长匹配
+    update_rate: 250  # 与Gazebo物理步长匹配
+    use_sim_time: true
     
     # === 控制器声明 ===
     # 状态广播器
