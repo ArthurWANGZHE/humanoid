@@ -207,13 +207,6 @@
       link="neck_yaw_link" />
     <child
       link="head_camera_link" />
-    <axis
-      xyz="0 0 0" />
-    <limit
-      lower="3.14"
-      upper="3.14"
-      effort="3.14"
-      velocity="3.14" />
   </joint>
   <link
     name="right_base_pitch_link">
@@ -614,7 +607,7 @@
     <child
       link="right_gripper1_link" />
     <axis
-      xyz="-1 0 0" />
+      xyz="1 0 0" />
     <limit
       lower="0"
       upper="0.03"
@@ -672,7 +665,7 @@
     <child
       link="right_gripper2_link" />
     <axis
-      xyz="-1 0 0" />
+      xyz="1 0 0" />
     <mimic joint="right_gripper1_joint" multiplier="-1.0" />
     <limit
       lower="-0.03"
@@ -724,19 +717,12 @@
     name="right_camera_joint"
     type="fixed">
     <origin
-      xyz="-0.0391680397915273 -0.11500000000002 0.200914320180246"
-      rpy="-3.14159265358978 -0.995598788533701 -3.14159265358979" />
+      xyz="0.000000000 0.072000210 -0.156500000"
+      rpy="1.570796327 0.000000000 1.570796327" />
     <parent
-      link="right_wrist_pitch_link" />
+      link="right_wrist_yaw_link" />
     <child
       link="right_camera_link" />
-    <axis
-      xyz="0.0790644615829094 0.996083645985627 0.0395750061855195" />
-    <limit
-      lower="3.14"
-      upper="3.14"
-      effort="3.14"
-      velocity="3.14" />
   </joint>
   <link
     name="left_base_pitch_link">
@@ -1247,18 +1233,11 @@
     name="left_camera_joint"
     type="fixed">
     <origin
-      xyz="0.00704719917372136 -0.115000000000021 0.212154287965243"
-      rpy="1.57079632679491 -1.47276160380397 0" />
+      xyz="0.000000000 0.071999971 -0.156500000"
+      rpy="-3.141592654 0.000000000 1.570796327" />
     <parent
-      link="left_wrist_pitch_link" />
+      link="left_wrist_yaw_link" />
     <child
       link="left_camera_link" />
-    <axis
-      xyz="0.0932272804543212 0.144218272221705 0.985139907574232" />
-    <limit
-      lower="3.14"
-      upper="3.14"
-      effort="3.14"
-      velocity="3.14" />
   </joint>
 </robot>
