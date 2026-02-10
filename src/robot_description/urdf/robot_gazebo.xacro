@@ -33,7 +33,7 @@
     </gazebo>
     
     <!-- 右手相机（RGB） -->
-    <gazebo reference="right_camera_link">
+    <gazebo reference="left_camera_optical_link">
       <sensor name="right_camera" type="camera">
         <pose>0 0 0 0 -1.5708 1.5708</pose>
         <always_on>1</always_on>
@@ -56,7 +56,7 @@
     </gazebo>
     
     <!-- 左手相机（RGB） -->
-    <gazebo reference="left_camera_link">
+    <gazebo reference="left_camera_optical_link">
       <sensor name="left_camera" type="camera">
         <pose>0 0 0 1.5708 -1.5708 0</pose>
         <always_on>1</always_on>

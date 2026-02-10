@@ -5,9 +5,13 @@
   <!-- 包含结构 -->
   <xacro:include filename="robot_structure.urdf.xacro"/>
   
+  <!-- 包含 相机光学坐标系 -->
+  <xacro:include filename="camera_optical_link.xacro"/>
+  <xacro:camera_optical_link/>
   
   <xacro:if value="$(arg use_gazebo)">
     <!-- gazebo 仿真 -->
+    
     <!-- 包含 ROS2 Control 配置 -->
     <xacro:include filename="robot_ros2_control.xacro"/>
     <xacro:robot_ros2_control/>
