@@ -24,7 +24,7 @@ nodes_enable:
   topic_bridge: true
   
   # moveit
-  moveit: true
+  moveit: false
   
   # 工具
   tools:
@@ -33,7 +33,7 @@ nodes_enable:
   # gui应用，未安装可关闭
   GUI_APP:
     all_disable: false
-    rviz2: true
-    rqt: false
+    rviz2: false
+    rqt: true
 
   
