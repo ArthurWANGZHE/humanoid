@@ -114,7 +114,6 @@ def launch_setup(context: LaunchContext):
                 Command([
                     'xacro ', xacro_path, " use_gazebo:=true",])
             },
-            {"use_sim_time": True},
         ]
     )
     
@@ -215,8 +214,7 @@ def launch_setup(context: LaunchContext):
         executable="rviz2",
         name="rviz2",
         output="screen",
-        arguments=["-d", rviz2_config],
-        parameters=[{"use_sim_time": True}]
+        arguments=["-d", rviz2_config]
     )
     
     rqt = Node(
@@ -234,8 +232,7 @@ def launch_setup(context: LaunchContext):
         PythonLaunchDescriptionSource([
             FindPackageShare('robot_moveit_config'),
             '/launch/move_group.launch.py'
-        ]),
-        launch_arguments={'use_sim_time': 'true'}.items(),
+        ])
     )
     
     # ============ 4. 启动流程 ============

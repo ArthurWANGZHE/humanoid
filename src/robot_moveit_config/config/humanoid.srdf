@@ -29,7 +29,7 @@
     </group>
     <group name="left_gripper">
         <joint name="left_gripper1_joint"/>
-        <joint name="left_gripper2_joiint"/>
+        <joint name="left_gripper2_joint"/>
     </group>
     <group name="right_gripper">
         <joint name="right_gripper1_joint"/>
