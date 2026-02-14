@@ -24,7 +24,7 @@ nodes_enable:
   topic_bridge: true
   
   # moveit
-  moveit: false
+  moveit: true
   
   # 工具
   tools:

@@ -281,7 +281,7 @@ def launch_setup(context: LaunchContext):
     
 def generate_launch_description(): 
     return LaunchDescription([
-        # SetParameter(name='use_sim_time', value=True),
+        SetParameter(name='use_sim_time', value=True),
         
         # 声明参数
         DeclareLaunchArgument(
