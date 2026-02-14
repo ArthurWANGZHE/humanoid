@@ -12,7 +12,7 @@
     <xacro:if value="$(arg use_gazebo)">
       <!-- gazebo 仿真 -->
       <xacro:include filename="humanoid.gazebo.ros2_control.xacro" />
-      <xacro:humanoid_ros2_control name="GazeboSystem" initial_positions_file="$(arg initial_positions_file)"/>
+      <xacro:humanoid_gazebo_ros2_control name="GazeboSystem" initial_positions_file="$(arg initial_positions_file)"/>
       
       <!-- 包含 Gazebo 配置 -->
       <xacro:include filename="humanoid.gazebo.xacro"/>

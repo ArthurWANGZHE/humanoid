@@ -218,7 +218,6 @@ def launch_setup(context: LaunchContext):
     rqt = Node(
         package="rqt_gui",
         executable="rqt_gui",
-        name="rqt_gui",
         output="screen",
         arguments=[
             "--perspective-file",
@@ -248,7 +247,7 @@ def launch_setup(context: LaunchContext):
     # 可选节点注册
     opts_dict = {
         # yaml配置的key : launch节点
-        # 控制器
+        # ROS2控制器
         'neck_controller': neck_controller,
         'right_arm_controller': right_arm_controller,
         'right_gripper_controller': right_gripper_controller,
