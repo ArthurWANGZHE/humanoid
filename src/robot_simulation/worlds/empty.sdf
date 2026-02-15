@@ -19,12 +19,12 @@
     
     <!-- Ground plane -->
     <include>
-      <uri>model://robot_simulation/sdf/ground_plane.sdf</uri>
+      <uri>model://ground plane</uri>
     </include>
 
     <!-- Sun -->
     <include>
-      <uri>model://robot_simulation/sdf/sun.sdf</uri>
+      <uri>model://sun</uri>
     </include>
     
   </world>

@@ -63,7 +63,7 @@ def launch_setup(context: LaunchContext):
                 FindPackageShare("robot_description"), ".."
             ]),
             ':',
-            PathJoinSubstitution([pkg_share, ".."])
+            PathJoinSubstitution([pkg_share, "models"])
         ]
     )
     
