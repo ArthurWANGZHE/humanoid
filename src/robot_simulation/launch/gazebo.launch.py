@@ -112,6 +112,7 @@ def launch_setup(context: LaunchContext):
         parameters=[{
             "robot_description": Command([
                 'xacro ', xacro_path, " use_gazebo:=true"]),
+            # "use_sim_time": True,
         }]
     )
     
@@ -222,14 +223,16 @@ def launch_setup(context: LaunchContext):
         arguments=[
             "--perspective-file",
             PathJoinSubstitution([pkg_share, "config", "rqt.perspective"])
-        ]
+        ],
+        parameters=[{"use_sim_time": False}]
     )
     
     moveit = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             FindPackageShare('robot_moveit_config'),
             '/launch/move_group.launch.py'
-        ])
+        ]),
+        # launch_arguments={'use_sim_time': 'true'}.items()
     )
     
     # ============ 4. 启动流程 ============
@@ -281,7 +284,7 @@ def launch_setup(context: LaunchContext):
     
 def generate_launch_description(): 
     return LaunchDescription([
-        # 不能加 SetParameter(name='use_sim_time', value=True),
+        SetParameter(name='use_sim_time', value=True),
         
         # 声明参数
         DeclareLaunchArgument(

@@ -1,6 +1,7 @@
 # === 仿真配置 ===
 # PS：启动较慢，需要耐心等待
 simulation:
+  use_sim_time: true
   world_file: "worlds/empty.sdf"
 
 # === 节点启动选择 ===
