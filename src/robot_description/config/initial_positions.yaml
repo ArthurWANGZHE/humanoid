@@ -3,7 +3,7 @@
 initial_positions:
   left_base_pitch_joint: 0
   left_elbow_pitch_joint: 0
-  left_gripper1_joint: 0
+  left_gripper1_joint: 0.005
   left_shoulder_roll_joint: 0
   left_shoulder_yaw_joint: 0
   left_wrist_pitch_joint: 0
@@ -12,7 +12,7 @@ initial_positions:
   neck_yaw_joint: 0
   right_base_pitch_joint: 0
   right_elbow_pitch_joint: 0
-  right_gripper1_joint: 0
+  right_gripper1_joint: 0.005
   right_shoulder_roll_joint: 0
   right_shoulder_yaw_joint: 0
   right_wrist_pitch_joint: 0

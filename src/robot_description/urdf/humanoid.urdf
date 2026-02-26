@@ -1171,7 +1171,7 @@
     </collision>
   </link>
   <joint
-    name="left_gripper2_joiint"
+    name="left_gripper2_joint"
     type="prismatic">
     <origin
       xyz="0 0.14099995082628 -0.0425000000000004"
