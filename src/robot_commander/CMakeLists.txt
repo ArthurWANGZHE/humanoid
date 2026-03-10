@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 find_package(example_interfaces REQUIRED)
 find_package(robot_interfaces REQUIRED)
 
@@ -18,7 +19,7 @@ install(
 )
 
 add_executable(commander src/commander_node.cpp)
-ament_target_dependencies(commander rclcpp moveit_ros_planning_interface example_interfaces robot_interfaces)
+ament_target_dependencies(commander rclcpp moveit_ros_planning_interface example_interfaces robot_interfaces tf2_geometry_msgs)
 
 install(TARGETS 
   commander

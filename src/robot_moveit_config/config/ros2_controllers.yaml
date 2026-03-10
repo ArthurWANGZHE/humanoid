@@ -26,6 +26,15 @@ controller_manager:
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
+# ===== ADD THIS SECTION =====
+#gazebo_ros2_control:
+#  ros__parameters:
+#    hardware:
+#      type: gazebo_ros2_control/GazeboSystem  # For Gazebo Classic
+      # OR try this if you have gz-ros2-control installed:
+      # type: gz_ros2_control/GazeboSimSystem
+# ============================
+
 right_arm_controller:
   ros__parameters:
     joints:
@@ -37,10 +46,10 @@ right_arm_controller:
       - right_wrist_yaw_joint
     command_interfaces:
       - position
-      - velocity
     state_interfaces:
       - position
       - velocity
+
 left_arm_controller:
   ros__parameters:
     joints:
@@ -52,30 +61,30 @@ left_arm_controller:
       - left_wrist_yaw_joint
     command_interfaces:
       - position
-      - velocity
     state_interfaces:
       - position
       - velocity
+
 left_gripper_controller:
   ros__parameters:
     joints:
       - left_gripper1_joint
     command_interfaces:
       - position
-      - velocity
     state_interfaces:
       - position
       - velocity
+
 right_gripper_controller:
   ros__parameters:
     joints:
       - right_gripper1_joint
     command_interfaces:
       - position
-      - velocity
     state_interfaces:
       - position
       - velocity
+
 neck_controller:
   ros__parameters:
     joints:
@@ -83,7 +92,6 @@ neck_controller:
       - neck_yaw_joint
     command_interfaces:
       - position
-      - velocity
     state_interfaces:
       - position
       - velocity

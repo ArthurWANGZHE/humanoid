@@ -110,3 +110,45 @@ ros2 launch robot_moveit_config demo.launch.py
 
 # Robot Interfaces
 自定义消息文件，后续可以继续配置自定义的msg,srv和action文件。
+
+# Robot_hardware
+---
+## 重要修改！！！！！！！！！！！！！！！
+我需要修改**ros_moveit_config**文件，撤掉其中的**commande_interface**中的速度部分。
+需要修改**robot_moveit_config**以下文件：
+- robot_moveit_config/config/humanoid.ros2_control.xacro
+- robot_moveit_config/config/ros2_controllers.yaml
+
+可能需要修改
+- robot_description/urdf/humanoid.gazebo.ros2_control.xacro
+
+---
+
+关联电机和**ros2_control**，实现电机控制。
+目前依旧是仿真模式，需要启动电机控制时需要，配置电机的通道和ID,注释模拟初始位置，配置canfd分析仪参数。
+
+```xml
+  <!-- <plugin>mock_components/GenericSystem</plugin> -->
+  <plugin>robot_hardware/HumanoidRobotHardware</plugin>
+  <!-- candfd分析仪具体参数信息 -->
+  <param name="lib_path">/home/htb/human_ws/src/robot_hardware/lib/libcontrolcanfd.so</param>
+  <!-- 需根据驱动库函数位置进行修改 -->
+  <param name="device_type">USBCANFD_200U</param>
+  <param name="device_index">0</param>
+  <param name="abit_baud">1000000</param>
+  <param name="dbit_baud">5000000</param>
+```
+
+给关节添加电机的通道和ID,并注释初始位置。
+```xml
+<joint name="right_base_pitch_joint">
+    <param name="dev_id">1</param>
+    <param name="channel">0</param>
+
+    <command_interface name="position"/>
+    <state_interface name="position">
+      <!-- <param name="initial_value">${initial_positions['right_base_pitch_joint']}</param> -->
+    </state_interface>
+    <state_interface name="velocity"/>
+</joint>
+```

@@ -3,6 +3,7 @@
 #include <example_interfaces/msg/bool.hpp>
 #include <example_interfaces/msg/float64_multi_array.hpp>
 #include <robot_interfaces/msg/pose_command.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 using MoveGroupInterface = moveit::planning_interface::MoveGroupInterface;
 using Bool = example_interfaces::msg::Bool;
@@ -61,44 +62,6 @@ public:
     }
 
     void gotoPoseTargert(const std::shared_ptr<MoveGroupInterface> &arm, double x, double y, double z, 
-                        double roll, double pitch, double yaw, bool cartesion_path = false)
-    {
-        tf2::Quaternion q;
-        q.setRPY(roll, pitch, yaw);
-        q = q.normalize();
-
-        geometry_msgs::msg::PoseStamped  target_pose;
-        target_pose.header.frame_id = "link00";
-        target_pose.pose.position.x = x;
-        target_pose.pose.position.y = y;
-        target_pose.pose.position.z = z;
-        target_pose.pose.orientation.x =q.getX();
-        target_pose.pose.orientation.y = q.getY();
-        target_pose.pose.orientation.z = q.getZ();
-        target_pose.pose.orientation.w = q.getW();
-
-        arm->setStartStateToCurrentState();
-        
-        if (!cartesion_path){
-            arm->setPoseTarget(target_pose);
-            planAndExecute(arm);
-        }else{
-            std::vector<geometry_msgs::msg::Pose> waypoints;
-            waypoints.push_back(target_pose.pose);
-
-            moveit_msgs::msg::RobotTrajectory trajectory;
-            moveit_msgs::msg::MoveItErrorCodes error_code;
-            double fraction = arm->computeCartesianPath(waypoints, 0.01, 0.0, trajectory, true, &error_code);
-
-            if(fraction == 1){
-                arm->execute(trajectory);
-            }else{
-                RCLCPP_ERROR(node_->get_logger(), "笛卡尔路径规划失败，只完成了 %.2f%%", fraction * 100.0);
-            }
-        }
-    }
-
-    void gotoPoseTargert(const std::shared_ptr<MoveGroupInterface> &arm, double x, double y, double z, 
                         double roll, double pitch, double yaw, bool cartesion_path = false, bool relative = false)
     {
         tf2::Quaternion q;
@@ -112,7 +75,7 @@ public:
             target_pose.pose.position.x = x;
             target_pose.pose.position.y = y;
             target_pose.pose.position.z = z;
-            target_pose.pose.orientation.x =q.getX();
+            target_pose.pose.orientation.x = q.getX();
             target_pose.pose.orientation.y = q.getY();
             target_pose.pose.orientation.z = q.getZ();
             target_pose.pose.orientation.w = q.getW();
@@ -121,12 +84,19 @@ public:
             target_pose.pose.position.x += x;
             target_pose.pose.position.y += y;
             target_pose.pose.position.z += z;
-            target_pose.pose.orientation.x +=q.getX();
-            target_pose.pose.orientation.y += q.getY();
-            target_pose.pose.orientation.z += q.getZ();
-            target_pose.pose.orientation.w += q.getW();
+            
+            tf2::Quaternion q_current;
+            tf2::fromMsg(target_pose.pose.orientation, q_current);
+            q = q_current * q;
+            q = q.normalize();
+
+            target_pose.pose.orientation.x = q.getX();
+            target_pose.pose.orientation.y = q.getY();
+            target_pose.pose.orientation.z = q.getZ();
+            target_pose.pose.orientation.w = q.getW();
         }
 
+        // arm->getCurrentState(5.0);
         arm->setStartStateToCurrentState();
         
         if (!cartesion_path){

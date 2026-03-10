@@ -1,0 +1,9 @@
+<library path="robot_hardware">
+    <class  name="robot_hardware/HumanoidRobotHardware"
+            type="robot_hardware::HumanoidRobotHardware"
+            base_class_type="hardware_interface::SystemInterface">
+        <description>
+            Hardware interface for a humanoid_robot
+        </description>
+    </class>
+</library>

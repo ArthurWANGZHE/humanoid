@@ -7,11 +7,10 @@ moveit_setup_assistant_config:
   package_settings:
     author_name: htb
     author_email: 2385511404@qq.com
-    generated_timestamp: 1770474523
+    generated_timestamp: 1772788138
   control_xacro:
     command:
       - position
-      - velocity
     state:
       - position
       - velocity
@@ -21,7 +20,6 @@ moveit_setup_assistant_config:
   control_xacro:
     command:
       - position
-      - velocity
     state:
       - position
       - velocity

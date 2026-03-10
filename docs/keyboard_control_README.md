@@ -93,3 +93,28 @@ You can modify step sizes in the code:
 - Make sure `robot_commander` node is running to process these commands
 - Press ESC or Ctrl+C to quit
 - Terminal must support raw input mode
+
+## Updates
+
+### joint_keyboard_control.py
+
+- Added functionality to read and initialize the robot's starting joint positions.
+
+### cartesian_keyboard_control.py
+
+- Added support for simulation time (`use_sim_time`).
+- Fixed quaternion computation error.
+```py
+    def publish_pose(self, publisher, x=0.0, y=0.0, z=0.0, roll=0.0, pitch=0.0, yaw=0.0):
+    """Publish relative pose command"""
+    msg = PoseCommand()
+    msg.x = x
+    msg.y = y
+    msg.z = z
+    msg.roll = roll
+    msg.pitch = pitch
+    msg.yaw = yaw
+    msg.relative = True
+    msg.cartesian_path = False #笛卡尔规划部分可用，需要测试。
+    publisher.publish(msg)
+```
