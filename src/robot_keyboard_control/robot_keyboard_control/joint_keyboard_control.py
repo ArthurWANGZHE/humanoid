@@ -14,7 +14,38 @@ import tty
 import rclpy
 from rclpy.node import Node
 from example_interfaces.msg import Float64MultiArray, Bool
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from sensor_msgs.msg import JointState
 
+# ── Joint name configuration ──────────────────────────────────────────────────
+# Modify these lists to match the joint names published by your hardware_interface.
+# Order must correspond to the index used in self.left_joints / self.right_joints / self.neck_joints.
+LEFT_JOINT_NAMES = [
+    'left_base_pitch_joint',      
+    'left_shoulder_roll_joint',   
+    'left_shoulder_yaw_joint',    
+    'left_elbow_pitch_joint',     
+    'left_wrist_pitch_joint',     
+    'left_wrist_yaw_joint',       
+]
+
+RIGHT_JOINT_NAMES = [
+    'right_base_pitch_joint',     
+    'right_shoulder_roll_joint',   
+    'right_shoulder_yaw_joint',   
+    'right_elbow_pitch_joint',    
+    'right_wrist_pitch_joint',   
+    'right_wrist_yaw_joint',     
+]
+
+NECK_JOINT_NAMES = [
+    'neck_pitch_joint',   
+    'neck_yaw_joint',     
+]
+
+# Timeout (seconds) to wait for the first /joint_states message
+INIT_TIMEOUT_SEC = 5.0
+# ──────────────────────────────────────────────────────────────────────────────
 
 class JointKeyboardControl(Node):
     def __init__(self):
@@ -33,11 +64,95 @@ class JointKeyboardControl(Node):
         self.neck_joints = [0.0, 0.0]
         
         # Control parameters
-        self.joint_step = 0.1  # radians
+        self.joint_step = 0.02  # radians
         
+        # Read hardware_interface state_interface values via /joint_states
+        self._read_initial_joint_states()
+
         self.get_logger().info('Joint Keyboard Control Started')
         self.print_instructions()
         
+     # ── Initial state reader ───────────────────────────────────────────────────
+
+    def _read_initial_joint_states(self):
+        """
+        Subscribe to /joint_states (published by ros2_control's JointStatesBroadcaster,
+        which directly mirrors the hardware_interface state_interface values) and
+        use the first received message to initialise left_joints, right_joints and
+        neck_joints.
+
+        Falls back to zero-initialisation when no message arrives within INIT_TIMEOUT_SEC.
+        """
+        self.get_logger().info(
+            f'Waiting up to {INIT_TIMEOUT_SEC}s for /joint_states '
+            f'(hardware_interface state_interface) …'
+        )
+
+        # Use BEST_EFFORT so we can receive messages even from a transient-local publisher
+        qos = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=1,
+        )
+
+        self._init_received = False
+
+        self._joint_state_sub = self.create_subscription(
+            JointState,
+            '/joint_states',
+            self._joint_states_init_callback,
+            qos,
+        )
+
+        # Spin until we get a message or time out
+        start = self.get_clock().now()
+        while not self._init_received:
+            rclpy.spin_once(self, timeout_sec=0.1)
+            elapsed = (self.get_clock().now() - start).nanoseconds * 1e-9
+            if elapsed >= INIT_TIMEOUT_SEC:
+                self.get_logger().warn(
+                    'Timed out waiting for /joint_states. '
+                    'Initialising all joints to 0.0 rad.'
+                )
+                break
+
+        # Subscription is no longer needed
+        self.destroy_subscription(self._joint_state_sub)
+
+    def _joint_states_init_callback(self, msg: JointState):
+        """
+        Parse a JointState message and populate the three joint arrays.
+
+        The JointStatesBroadcaster publishes *all* joints in a single message;
+        we pick out only the names we care about and map them to the correct index.
+        """
+        if self._init_received:
+            return  # Only need the first message
+
+        name_to_pos = dict(zip(msg.name, msg.position))
+
+        # Helper: fill a joint list from a name list, warn if a name is missing
+        def fill(joint_list, name_list):
+            for idx, joint_name in enumerate(name_list):
+                if joint_name in name_to_pos:
+                    joint_list[idx] = name_to_pos[joint_name]
+                    self.get_logger().info(
+                        f'  [{joint_name}] init → {name_to_pos[joint_name]:.4f} rad'
+                    )
+                else:
+                    self.get_logger().warn(
+                        f'  [{joint_name}] not found in /joint_states, keeping 0.0 rad'
+                    )
+
+        fill(self.left_joints,  LEFT_JOINT_NAMES)
+        fill(self.right_joints, RIGHT_JOINT_NAMES)
+        fill(self.neck_joints,  NECK_JOINT_NAMES)
+
+        self._init_received = True
+        self.get_logger().info('Initial joint states loaded from hardware_interface.')
+
+    # ── UI ────────────────────────────────────────────────────────────────────
+
     def print_instructions(self):
         print("\n" + "="*60)
         print("JOINT KEYBOARD CONTROL")

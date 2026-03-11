@@ -28,8 +28,8 @@ class CartesianKeyboardControl(Node):
         
         # Current poses (relative increments)
         self.position_step = 0.02  # meters
-        self.orientation_step = 0.1  # radians
-        self.neck_step = 0.1  # radians
+        self.orientation_step = 0.02  # radians
+        self.neck_step = 0.02  # radians
         
         # Neck state
         self.neck_joints = [0.0, 0.0]
@@ -78,7 +78,7 @@ class CartesianKeyboardControl(Node):
         msg.pitch = pitch
         msg.yaw = yaw
         msg.relative = True
-        msg.cartesian_path = True
+        msg.cartesian_path = False
         publisher.publish(msg)
     
     def handle_key(self, key):

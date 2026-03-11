@@ -21,7 +21,6 @@ moveit_simple_controller_manager:
       - right_wrist_yaw_joint
     action_ns: follow_joint_trajectory
     default: true
-
   left_arm_controller:
     type: FollowJointTrajectory
     joints:
@@ -33,21 +32,18 @@ moveit_simple_controller_manager:
       - left_wrist_yaw_joint
     action_ns: follow_joint_trajectory
     default: true
-
   left_gripper_controller:
     type: FollowJointTrajectory
     joints:
       - left_gripper1_joint
     action_ns: follow_joint_trajectory
     default: true
-
   right_gripper_controller:
     type: FollowJointTrajectory
     joints:
       - right_gripper1_joint
     action_ns: follow_joint_trajectory
     default: true
-
   neck_controller:
     type: FollowJointTrajectory
     joints:

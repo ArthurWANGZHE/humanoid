@@ -4,8 +4,8 @@
     <let name="rviz_config_path"
         value="$(find-pkg-share robot_commander)/launch/setting.rviz" />
     <let name="roscontrollers_config_path"
-        value="$(find-pkg-share robot_description)/config/ros2_controllers.yaml" />       
-        
+        value="$(find-pkg-share robot_description)/config/ros2_controllers.yaml" />   
+
     <node pkg="robot_state_publisher" exec="robot_state_publisher">
         <param name="robot_description"
             value="$(command 'xacro $(var urdf_path)')" />
@@ -27,7 +27,10 @@
 
     <include file="$(find-pkg-share robot_moveit_config)/launch/move_group.launch.py"/>
 
-    <!-- <node pkg="z1_robot_commander_cpp" exec="commander" /> -->
+    <node pkg="robot_commander" exec="commander" name="commander">
+        <param name="use_sim_time" value="true"/>
+    </node>
+
     <node pkg="rviz2" exec="rviz2" output="screen" 
         args="-d $(var rviz_config_path)" />
 
