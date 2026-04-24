@@ -45,6 +45,8 @@ class TrainingMonitorCallback(BaseCallback):
             "completed_episodes",
             "mean_episode_reward",
             "mean_episode_length",
+            "reached_threshold",
+            "reach_threshold_phase",
             "success_rate",
             "reached_rate",
             "grasped_rate",
@@ -87,6 +89,8 @@ class TrainingMonitorCallback(BaseCallback):
                     "episode_reward": float(info.get("episode_reward", info.get("episode", {}).get("r", 0.0))),
                     "episode_length": float(info.get("episode_length", info.get("episode", {}).get("l", 0.0))),
                     "is_success": float(info.get("is_success", 0.0)),
+                    "reached_threshold": float(info.get("reached_threshold", 0.0)),
+                    "reach_threshold_phase": float(info.get("reach_threshold_phase", 0.0)),
                     "reached_object": float(info.get("reached_object", 0.0)),
                     "grasped_object": float(info.get("grasped_object", 0.0)),
                     "lifted_object": float(info.get("lifted_object", 0.0)),
@@ -130,6 +134,8 @@ class TrainingMonitorCallback(BaseCallback):
         metrics = {
             "mean_episode_reward": _safe_mean(rewards),
             "mean_episode_length": _safe_mean(lengths),
+            "reached_threshold": _safe_mean([item["reached_threshold"] for item in self._episode_history]),
+            "reach_threshold_phase": _safe_mean([item["reach_threshold_phase"] for item in self._episode_history]),
             "success_rate": _safe_mean(success),
             "reached_rate": _safe_mean(reached),
             "grasped_rate": _safe_mean(grasped),
@@ -164,6 +170,8 @@ class TrainingMonitorCallback(BaseCallback):
             "completed_episodes": self.completed_episodes,
             "mean_episode_reward": metrics["mean_episode_reward"],
             "mean_episode_length": metrics["mean_episode_length"],
+            "reached_threshold": metrics["reached_threshold"],
+            "reach_threshold_phase": metrics["reach_threshold_phase"],
             "success_rate": metrics["success_rate"],
             "reached_rate": metrics["reached_rate"],
             "grasped_rate": metrics["grasped_rate"],
@@ -200,15 +208,12 @@ class TrainingMonitorCallback(BaseCallback):
                 f"update={self.update_idx} "
                 f"timesteps={self.num_timesteps} "
                 f"episodes={self.completed_episodes} "
-                f"mean_reward={row['mean_episode_reward']:.2f} "
-                f"mean_len={row['mean_episode_length']:.1f} "
-                f"success={row['success_rate']:.2%} "
+                f"phase={row['reach_threshold_phase']:.0f} "
+                f"threshold={row['reached_threshold']:.3f} "
                 f"reached={row['reached_rate']:.2%} "
-                f"grasped={row['grasped_rate']:.2%} "
-                f"lifted={row['lifted_rate']:.2%} "
-                f"dist={row['mean_final_distance']:.3f} "
-                f"policy_loss={row['policy_loss']:.4f} "
-                f"value_loss={row['value_loss']:.4f}"
+                f"final_dist={row['mean_final_distance']:.3f} "
+                f"min_dist={row['mean_min_distance']:.3f} "
+                f"action_mag={row['mean_action_magnitude']:.3f}"
             )
 
     def _on_training_end(self) -> None:
@@ -231,6 +236,10 @@ class PeriodicEvalCallback(BaseCallback):
         reach_threshold_phase: int | None = None,
         use_grasp_tcp: str | bool | None = None,
         arm_action_scale: float | None = None,
+        target_mode: str = "brick",
+        pregrasp_height_offset: float = 0.08,
+        near_target_damping_distance: float | None = None,
+        near_target_damping_min_scale: float | None = None,
         reaching_brick_range: dict[str, float] | None = None,
         reaching_home_overrides: dict[str, float] | None = None,
         verbose: int = 0,
@@ -248,6 +257,10 @@ class PeriodicEvalCallback(BaseCallback):
         self.reach_threshold_phase = reach_threshold_phase
         self.use_grasp_tcp = use_grasp_tcp
         self.arm_action_scale = arm_action_scale
+        self.target_mode = target_mode
+        self.pregrasp_height_offset = pregrasp_height_offset
+        self.near_target_damping_distance = near_target_damping_distance
+        self.near_target_damping_min_scale = near_target_damping_min_scale
         self.reaching_brick_range = reaching_brick_range
         self.reaching_home_overrides = reaching_home_overrides
         self.last_eval_step = 0
@@ -308,6 +321,14 @@ class PeriodicEvalCallback(BaseCallback):
             command.extend(["--use-grasp-tcp", str(self.use_grasp_tcp).lower()])
         if self.arm_action_scale is not None:
             command.extend(["--arm-action-scale", str(self.arm_action_scale)])
+        if self.target_mode:
+            command.extend(["--target-mode", str(self.target_mode)])
+        if self.pregrasp_height_offset is not None:
+            command.extend(["--pregrasp-height-offset", str(self.pregrasp_height_offset)])
+        if self.near_target_damping_distance is not None:
+            command.extend(["--near-target-damping-distance", str(self.near_target_damping_distance)])
+        if self.near_target_damping_min_scale is not None:
+            command.extend(["--near-target-damping-min-scale", str(self.near_target_damping_min_scale)])
         if self.reaching_brick_range is not None:
             command.extend([
                 "--reaching-brick-x-range",
@@ -368,9 +389,11 @@ class PeriodicEvalCallback(BaseCallback):
             "[eval] "
             f"eval={self.eval_idx} "
             f"timesteps={self.num_timesteps} "
-            f"mean_reward={summary['mean_reward']:.2f} "
-            f"success={summary['success_rate']:.2%} "
-            f"grasped={summary['grasped_rate']:.2%} "
-            f"lifted={summary['lifted_rate']:.2%}"
+            f"phase={summary['reach_threshold_phase']} "
+            f"threshold={summary['reached_threshold']:.3f} "
+            f"reached={summary['reached_rate']:.2%} "
+            f"final_dist={summary['mean_final_distance']:.3f} "
+            f"min_dist={summary['mean_min_episode_distance']:.3f} "
+            f"action_mag={summary['mean_action_magnitude']:.3f}"
         )
         return True

@@ -24,6 +24,8 @@ REACHING_THRESHOLD_PHASES = {
     4: 0.08,
 }
 
+REACHING_TARGET_MODES = {"brick", "pregrasp"}
+
 DEFAULT_REACHING_BRICK_RANGE = {
     "train": {"x_min": 0.43, "x_max": 0.50, "y_min": -0.28, "y_max": -0.20},
     "eval": {"x_min": 0.41, "x_max": 0.52, "y_min": -0.30, "y_max": -0.18},
@@ -106,6 +108,7 @@ class EpisodeTaskMetrics:
 
 @dataclass(frozen=True)
 class TaskState:
+    target_distance: float
     distance_to_brick: float
     brick_height: float
     gripper_closed_error: float
@@ -137,6 +140,10 @@ class HumanoidBrickPickEnv(gym.Env):
         reach_threshold_phase: int | None = None,
         use_grasp_tcp: str | bool | None = None,
         arm_action_scale: float | None = None,
+        target_mode: str = "brick",
+        pregrasp_height_offset: float = 0.08,
+        near_target_damping_distance: float | None = None,
+        near_target_damping_min_scale: float | None = None,
         reaching_brick_range: dict[str, float] | None = None,
         reaching_home_overrides: dict[str, float] | None = None,
     ) -> None:
@@ -172,7 +179,21 @@ class HumanoidBrickPickEnv(gym.Env):
         self.gripper_closed_threshold = 0.012
         self.lift_height_threshold = 0.08
         self.stable_hold_steps_required = 5
-        self.arm_action_scale = float(arm_action_scale) if arm_action_scale is not None else (0.03 if self.reaching_only else 0.035)
+        self.arm_action_scale = float(arm_action_scale) if arm_action_scale is not None else (0.027 if self.reaching_only else 0.035)
+        self.target_mode = str(target_mode).strip().lower()
+        if self.target_mode not in REACHING_TARGET_MODES:
+            raise ValueError(
+                f"Unsupported target_mode '{target_mode}'. Expected one of {sorted(REACHING_TARGET_MODES)}."
+            )
+        self.pregrasp_height_offset = float(pregrasp_height_offset)
+        if near_target_damping_distance is None:
+            self.near_target_damping_distance = 0.12 if self.reaching_only else None
+        else:
+            self.near_target_damping_distance = float(near_target_damping_distance)
+        if near_target_damping_min_scale is None:
+            self.near_target_damping_min_scale = 0.85 if self.reaching_only else 1.0
+        else:
+            self.near_target_damping_min_scale = float(near_target_damping_min_scale)
         self.reaching_brick_range = reaching_brick_range
         self.reaching_home_overrides = (
             dict(DEFAULT_REACHING_HOME_OVERRIDES)
@@ -418,6 +439,10 @@ class HumanoidBrickPickEnv(gym.Env):
             "end_effector_reference": self.end_effector_reference_name,
             "end_effector_local_offset": self.end_effector_local_offset.tolist(),
             "arm_action_scale": self.arm_action_scale,
+            "target_mode": self.target_mode,
+            "pregrasp_height_offset": self.pregrasp_height_offset,
+            "near_target_damping_distance": self.near_target_damping_distance,
+            "near_target_damping_min_scale": self.near_target_damping_min_scale,
             "brick_range": (
                 self.reaching_brick_range
                 if self.reaching_brick_range is not None
@@ -467,6 +492,39 @@ class HumanoidBrickPickEnv(gym.Env):
             "gripper_closed_error": gripper_closed_error,
         }
 
+    def _get_target_position(self, observation: dict[str, np.ndarray | bool]) -> np.ndarray:
+        brick_position = np.array(observation["brick_position"], dtype=np.float32)
+        if self.target_mode == "pregrasp":
+            return brick_position + np.array([0.0, 0.0, self.pregrasp_height_offset], dtype=np.float32)
+        return brick_position
+
+    def _compute_damped_arm_delta(
+        self,
+        action: np.ndarray,
+        observation: dict[str, np.ndarray | bool],
+    ) -> np.ndarray:
+        arm_dim = len(self.training_config.arm_joints)
+        arm_delta = action[:arm_dim] * self.arm_action_scale
+        damping_distance = self.near_target_damping_distance
+        if (
+            not self.reaching_only
+            or damping_distance is None
+            or damping_distance <= 0.0
+            or self.near_target_damping_min_scale >= 1.0
+        ):
+            return arm_delta
+
+        target_position = self._get_target_position(observation)
+        ee_position = np.array(observation["ee_position"], dtype=np.float32)
+        target_distance = float(np.linalg.norm(target_position - ee_position))
+        if target_distance >= damping_distance:
+            return arm_delta
+
+        clamped_min_scale = float(np.clip(self.near_target_damping_min_scale, 0.0, 1.0))
+        blend = target_distance / damping_distance
+        damping_scale = clamped_min_scale + (1.0 - clamped_min_scale) * blend
+        return arm_delta * damping_scale
+
     def _flatten_obs(self, observation: dict[str, np.ndarray | bool]) -> np.ndarray:
         relative_brick = observation["brick_position"] - observation["ee_position"]
         return np.concatenate(
@@ -482,6 +540,8 @@ class HumanoidBrickPickEnv(gym.Env):
         ).astype(np.float32)
 
     def _compute_task_state(self, observation: dict[str, np.ndarray | bool]) -> TaskState:
+        target_position = self._get_target_position(observation)
+        target_distance = float(np.linalg.norm(target_position - observation["ee_position"]))
         distance = float(np.linalg.norm(observation["brick_position"] - observation["ee_position"]))
         brick_height = float(observation["brick_position"][2])
         gripper_closed_error = float(observation["gripper_closed_error"])
@@ -489,7 +549,7 @@ class HumanoidBrickPickEnv(gym.Env):
         # Intended progression: reach -> grasp -> lift -> stable hold -> success.
         # Later stages are gated by earlier stages so rewards and metrics cannot
         # report a lift/success from merely bumping the brick or closing far away.
-        reached_object = distance < self.reach_distance_threshold
+        reached_object = target_distance < self.reach_distance_threshold
         grasped_object = (
             reached_object
             and distance < self.grasp_distance_threshold
@@ -504,6 +564,7 @@ class HumanoidBrickPickEnv(gym.Env):
         stable_hold = stable_hold_steps >= self.stable_hold_steps_required
         success = reached_object if self.reaching_only else stable_hold
         return TaskState(
+            target_distance=target_distance,
             distance_to_brick=distance,
             brick_height=brick_height,
             gripper_closed_error=gripper_closed_error,
@@ -540,11 +601,14 @@ class HumanoidBrickPickEnv(gym.Env):
 
         return {
             "distance_to_brick": state.distance_to_brick,
+            "target_distance": state.target_distance,
             "brick_height": state.brick_height,
             "final_distance_to_brick": self._task_metrics.final_distance_to_brick,
             "final_brick_height": self._task_metrics.final_brick_height,
             "reached_threshold": self.reach_distance_threshold,
             "reach_threshold_phase": float(self.reach_threshold_phase or 0),
+            "target_mode": self.target_mode,
+            "pregrasp_height_offset": self.pregrasp_height_offset,
             "min_episode_distance": self._task_metrics.min_distance_to_brick,
             "reached_object": self._task_metrics.reached_object,
             "grasped_object": self._task_metrics.grasped_object,
@@ -594,20 +658,21 @@ class HumanoidBrickPickEnv(gym.Env):
         reward += vel_penalty
         self._task_metrics.reward_velocity_penalty += vel_penalty
 
-        dist_term = -2.0 * state.distance_to_brick
+        dist_term = -2.0 * (state.target_distance if self.reaching_only else state.distance_to_brick)
         reward += dist_term
         self._task_metrics.reward_distance += dist_term
 
         if self._last_distance is not None:
-            approach_term = 6.0 * (self._last_distance - state.distance_to_brick)
+            current_distance = state.target_distance if self.reaching_only else state.distance_to_brick
+            approach_term = 6.0 * (self._last_distance - current_distance)
             reward += approach_term
             self._task_metrics.reward_approach += approach_term
-        self._last_distance = state.distance_to_brick
+        self._last_distance = state.target_distance if self.reaching_only else state.distance_to_brick
 
         if self.reaching_only:
             staged_bonus = 0.0
-            for threshold, bonus in ((0.25, 0.15), (0.18, 0.35), (0.12, 0.60)):
-                if state.distance_to_brick < threshold:
+            for threshold, bonus in ((0.25, 0.15), (0.18, 0.35), (0.12, 0.60), (0.10, 0.20), (0.08, 0.30)):
+                if state.target_distance < threshold:
                     staged_bonus += bonus
             if staged_bonus:
                 reward += staged_bonus
@@ -678,7 +743,7 @@ class HumanoidBrickPickEnv(gym.Env):
         current_observation = self._get_observation()
         arm_dim = len(self.training_config.arm_joints)
 
-        arm_delta = action[:arm_dim] * self.arm_action_scale
+        arm_delta = self._compute_damped_arm_delta(action, current_observation)
         arm_targets = np.clip(current_observation["arm_positions"] + arm_delta, self.arm_lower, self.arm_upper)
         gripper_action = action[arm_dim:]
         gripper_alpha = ((gripper_action + 1.0) * 0.5).astype(np.float32)

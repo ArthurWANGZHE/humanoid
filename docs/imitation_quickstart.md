@@ -1,6 +1,6 @@
 # Imitation Pipeline Quickstart
 
-## 1. Build
+## Build
 
 ```bash
 cd ~/humanoid
@@ -8,53 +8,51 @@ colcon build --packages-select robot_imitation_pipeline robot_keyboard_control r
 source install/setup.bash
 ```
 
-## 2. Start The Existing Real-Robot Stack
+## Start The Existing Robot Stack
 
-Use the same launch path already verified for keyboard teleop:
+Use the current real-robot path that already works for joint-space teleoperation:
 
 ```bash
 ros2 launch robot_commander robot_moveit.launch.xml use_simulation:=false
 ```
 
-If the commander node is not included in your launch session, start it separately:
+If needed, start the commander separately:
 
 ```bash
 ros2 run robot_commander commander
 ```
 
-## 3. Start Keyboard Teleop
+## Start Joint Teleop
 
-Use joint keyboard control as the v1 expert source:
+The verified expert path is still joint-space target control:
 
 ```bash
 ros2 run robot_keyboard_control joint_control
 ```
 
-## 4. Start The Recorder
+## Start The Recorder
 
-In another terminal:
+The existing recorder entrypoint is unchanged:
 
 ```bash
-cd ~/humanoid
-source install/setup.bash
 ros2 launch robot_imitation_pipeline demo_recorder.launch.py
 ```
 
-Default save path:
+Default recording config lives at [recording.yaml](/home/arthur/humanoid/src/robot_imitation_pipeline/config/recording.yaml).
+
+Default output:
 
 ```text
 ~/humanoid/data/imitation_raw
 ```
 
-## 5. Record One Episode
+## Record One Episode
 
 Start:
 
 ```bash
 ros2 run robot_imitation_pipeline demo_control start
 ```
-
-Operate the robot with keyboard teleop.
 
 Stop and mark success:
 
@@ -68,7 +66,11 @@ Stop and mark failure:
 ros2 run robot_imitation_pipeline demo_control stop --failure
 ```
 
-## 6. Validate
+The recorder is listen-only. It does not publish robot commands.
+
+## Validate
+
+Validate a dataset root:
 
 ```bash
 ros2 run robot_imitation_pipeline validate_demo data/imitation_raw
@@ -80,15 +82,49 @@ Validate one episode:
 ros2 run robot_imitation_pipeline validate_demo data/imitation_raw/episode_000001
 ```
 
-## 7. Dry-Run Replay
+Local wrapper:
 
-Default replay is non-actuating:
+```bash
+python3 tools/validate_demo.py data/imitation_raw/episode_000001
+```
+
+The validator checks:
+
+- required files
+- shape consistency
+- NaN and Inf
+- timestamp monotonicity
+- average sampling rate against `control_rate_hz`
+- image readability
+- metadata dimension consistency
+- `success.json.valid_for_training`
+
+Legacy episodes are reported as `LEGACY/WARN` instead of failing with unclear errors.
+
+## Inspect One Episode
+
+```bash
+python3 tools/inspect_demo.py --episode data/imitation_raw/episode_000001
+```
+
+This prints a compact summary of metadata, timestamps, state, action, and images.
+
+## Create A Fake Demo For Testing
+
+```bash
+python3 tools/make_fake_demo.py --output data/imitation_raw/episode_fake_000001
+python3 tools/validate_demo.py data/imitation_raw/episode_fake_000001
+```
+
+## Replay
+
+Dry-run replay is unchanged:
 
 ```bash
 ros2 run robot_imitation_pipeline replay_demo data/imitation_raw/episode_000001
 ```
 
-Real robot replay is intentionally gated twice. Copy the replay config, edit the copy so `execute_on_robot: true`, and pass `--execute-on-robot`:
+Real robot replay remains explicitly gated:
 
 ```bash
 cp src/robot_imitation_pipeline/config/replay.yaml /tmp/replay_execute.yaml
@@ -98,36 +134,21 @@ ros2 run robot_imitation_pipeline replay_demo data/imitation_raw/episode_000001 
   --execute-on-robot
 ```
 
-Before enabling this, inspect the dry-run output and confirm the robot is in a safe state.
-
-## 8. Convert For Training
+## Convert For Training
 
 ```bash
 ros2 run robot_imitation_pipeline convert_to_hdf5 data/imitation_raw \
   --output-dir data/imitation_converted
 ```
 
-This writes `dataset.npz`, split metadata, and `dataset.hdf5` if `h5py` is installed.
+The converter still writes the existing BC-friendly outputs and now also preserves `episode_ends` for future sequence models.
 
-## 9. Train The First Baseline
+## Important Rule
 
-```bash
-ros2 run robot_imitation_pipeline train_bc \
-  --config src/robot_imitation_pipeline/config/training.yaml
+The strict raw format uses:
+
+```text
+obs[i], robot_state[i] -> action[i]
 ```
 
-The first baseline is state-to-action behavior cloning:
-
-- input: 16D robot state vector
-- output: 16D keyboard command action vector
-
-Images are recorded now but not used by the first baseline. Add image models only after the raw dataset validates cleanly.
-
-## Useful Topic Checks
-
-```bash
-ros2 topic hz /joint_states
-ros2 topic hz /head_camera/image
-ros2 topic echo /left_joint_command
-ros2 topic echo /right_joint_command
-```
+If image count is not equal to `T`, joint order is wrong, or gripper commands are missing, do not train on that episode until validation is clean.

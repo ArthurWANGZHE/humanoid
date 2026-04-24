@@ -1,103 +1,138 @@
 # Imitation Dataset Format
 
-The raw dataset is one folder per real-robot demonstration episode.
+The current raw episode format is designed to keep the existing behavior cloning pipeline working while making new recordings strict enough for future Diffusion Policy conversion.
+
+## Raw Episode Tree
 
 ```text
-episode_000001/
+dataset/raw/episode_000001/
   meta.json
-  success.json
   timestamps.npy
+  robot_state.npy
+  action.npy
+  success.json
   joint_state_timestamps.npy
   joint_pos.npy
   joint_vel.npy
   actions.npy
   action_valid.npy
   gripper.npy
-  rgb_head/
-    frame_000001.jpg
-    frame_000002.jpg
-  rgb_head_timestamps.npy
-  rgb_head_ros_timestamps.npy
+  right_wrist_camera_timestamps.npy
+  right_wrist_camera_ros_timestamps.npy
+  obs/
+    right_wrist_camera/
+      000000.jpg
+      000001.jpg
+      ...
 ```
 
-## Episode Lifecycle
+The strict files for new recordings are:
 
-1. Start the robot stack and keyboard teleop.
-2. Call `/demo_recorder/start`.
-3. Operate the robot with keyboard teleop.
-4. Call `/demo_recorder/stop` with `true` for success or `false` for failure.
-5. The recorder writes arrays, images, metadata, and success label.
+- `timestamps.npy`
+- `robot_state.npy`
+- `action.npy`
+- `success.json`
+- `obs/<camera_name>/*.jpg`
 
-## Observations
+Legacy compatibility files are still written for existing replay, conversion, and baseline BC tools:
 
-`joint_pos.npy`: shape `(T, 16)`, ordered as:
+- `joint_pos.npy`
+- `joint_vel.npy`
+- `actions.npy`
+- `action_valid.npy`
+- `gripper.npy`
 
-- left arm 6 joints
-- right arm 6 joints
-- neck 2 joints
-- left and right gripper joints
+## Alignment Rule
 
-`joint_vel.npy`: same shape and order as `joint_pos.npy`.
+The required semantic contract is:
 
-Camera observations are saved independently as JPEG files. Camera timestamp arrays have one timestamp per saved frame. Training code can later associate camera frames to state/action samples by nearest timestamp.
+```text
+obs[i], robot_state[i] -> action[i]
+```
 
-## Actions
+For every frame index `i`, these refer to the same sampled control step:
 
-`actions.npy`: shape `(T, 16)`.
+- `timestamps[i]`
+- `robot_state[i]`
+- `action[i]`
+- `obs/right_wrist_camera/{i:06d}.jpg`
 
-Action mode: `joint_position_targets`.
+`action[i]` is the command that the recorder observed as the command to execute immediately after `obs[i]`. The recorder never shifts actions by one step.
 
-- `[0:6]`: latest `/left_joint_command`
-- `[6:12]`: latest `/right_joint_command`
-- `[12:14]`: latest `/neck_joint_command`
-- `[14:16]`: latest left/right gripper open command, encoded as `1.0` open and `0.0` close
+## Robot State
 
-At episode start, arm and neck target actions are initialized from the current `/joint_states` so the held keyboard target is explicit. The recorder does not smooth or alter keyboard commands.
+For the current first strict format, `robot_state.npy` is right-arm only and has shape `(T, 13)`:
 
-`action_valid.npy`: shape `(T, 16)`, boolean. A value is true when the corresponding action component is known.
+1. right arm joint positions, 6 values
+2. right arm joint velocities, 6 values
+3. right gripper state, 1 value
 
-`gripper.npy`: shape `(T, 2)`, duplicate convenience field for the gripper command/state channel used by v1.
+The exact ordering is recorded in `meta.json`:
 
-## Time Synchronization
+- `right_arm_joint_names`
+- `robot_state_names`
+- `robot_state_dim`
 
-`timestamps.npy` is the recorder sample time from the ROS node clock. State/action arrays are sampled at `sample_rate_hz` using the latest received `/joint_states` and command messages.
+## Action
 
-Camera frames are not forced to align one-to-one with state/action samples. Each enabled camera writes:
+`action.npy` has shape `(T, 7)`:
 
-- `<camera_name>_timestamps.npy`: recorder receive/write time
-- `<camera_name>_ros_timestamps.npy`: original `sensor_msgs/Image.header.stamp`
+1. right arm joint command actually observed on the right-arm command topic, 6 values
+2. right gripper command, 1 value
 
-This makes missing or delayed frames detectable during validation and conversion.
+The action semantics are explicit in `meta.json`:
 
-## Success / Failure
+- `control_mode`
+- `action_names`
+- `action_dim`
+
+Current default control mode is `joint_target`. If action semantics change later, `meta.json` must change with them.
+
+## Metadata
+
+Each episode `meta.json` records at least:
+
+- `control_mode`
+- `robot_state_dim`
+- `action_dim`
+- `right_arm_joint_names`
+- `action_names`
+- `control_rate_hz`
+- `image_size`
+- `camera_name`
+- `topic_names`
+- `start_time`
+- `end_time`
+- `task_name`
+- `robot_name`
+
+The file also includes the explicit alignment rule and camera path metadata.
+
+## Success Labels
 
 `success.json` contains:
 
 ```json
-{"success": true}
+{
+  "success": true,
+  "valid_for_training": true
+}
 ```
 
-Failed episodes are kept. Converters and training scripts can filter them later.
+Older episodes may only have `success`. The validator reports those as legacy/incomplete instead of crashing.
 
-## Conversion Format
+## Why This Supports BC And Future Diffusion Policy
 
-`convert_to_hdf5` creates:
+- Existing BC and replay tools still have access to the legacy arrays.
+- New recordings now have a strict one-image-per-step raw format.
+- Episode boundaries can be preserved during conversion via `episode_ends`.
+- The raw data is now suitable for future `obs_horizon`, `pred_horizon`, and `action_horizon` windowing without guessing camera alignment from nearest timestamps.
 
-- `dataset.npz`
-  - `obs_state`: `(N, 16)`
-  - `actions`: `(N, 16)`
-  - `episode_index`: `(N,)`
-- `dataset.hdf5` if `h5py` is installed
-  - `obs/state`
-  - `actions`
-  - `episode_index`
-- `splits.json`
-- `manifest.json`
+## Common Recording Errors
 
-The first baseline training script consumes `dataset.npz`.
-
-## VR Extension
-
-VR can be added later by recording its twist or pose topics as an alternate action mode, for example `ee_twist_delta` or `pose_delta`. The raw schema already records `action_mode` and `action_components` in `meta.json`, so new action definitions can coexist with keyboard joint-target episodes.
-
-Training code should not mix action modes unless a converter explicitly maps them into one representation.
+- Off-by-one action: `action[i]` accidentally corresponds to `obs[i-1]`
+- Missing camera frame: image count is not equal to `T`
+- Wrong joint order: saved joint names do not match array layout
+- Gripper command missing: arm commands exist but gripper action channel is absent
+- Topic not publishing: joint state, camera, or command topic is stale or absent
+- Legacy camera layout: images saved outside `obs/<camera_name>/`
