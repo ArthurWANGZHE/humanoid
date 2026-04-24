@@ -12,6 +12,9 @@ ACTION_COMPONENTS = {
     "gripper_open_command": [14, 16],
 }
 
+LEGACY_STATE_NAMES = ("joint_pos", "joint_vel", "actions", "action_valid", "gripper")
+STRICT_STATE_NAMES = ("robot_state", "action")
+
 
 def stamp_to_float(stamp: Any) -> float:
     if stamp is None:
@@ -55,6 +58,8 @@ def load_episode_arrays(episode_dir: Path) -> Dict[str, np.ndarray]:
     arrays: Dict[str, np.ndarray] = {}
     for name in [
         "timestamps",
+        "robot_state",
+        "action",
         "joint_pos",
         "joint_vel",
         "actions",
@@ -64,6 +69,14 @@ def load_episode_arrays(episode_dir: Path) -> Dict[str, np.ndarray]:
         path = episode_dir / f"{name}.npy"
         if path.exists():
             arrays[name] = np.load(path, allow_pickle=False)
+    if "actions" not in arrays and "action" in arrays:
+        arrays["actions"] = arrays["action"]
+    if "action" not in arrays and "actions" in arrays:
+        arrays["action"] = arrays["actions"]
+    if "joint_pos" not in arrays and "robot_state" in arrays:
+        arrays["joint_pos"] = arrays["robot_state"]
+    if "robot_state" not in arrays and "joint_pos" in arrays:
+        arrays["robot_state"] = arrays["joint_pos"]
     return arrays
 
 
@@ -109,8 +122,8 @@ def nested_get(data: Dict[str, Any], keys: Iterable[str], default: Any = None) -
 
 
 def split_state_action(arrays: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
-    state = arrays["joint_pos"].astype(np.float32)
-    action = arrays["actions"].astype(np.float32)
+    state = arrays["robot_state"].astype(np.float32)
+    action = arrays["action"].astype(np.float32)
     mask = np.isfinite(state).all(axis=1) & np.isfinite(action).all(axis=1)
     if "action_valid" in arrays:
         valid = arrays["action_valid"]
@@ -119,3 +132,10 @@ def split_state_action(arrays: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.nd
         else:
             mask &= valid.astype(bool)
     return state[mask], action[mask]
+
+
+def count_obs_images(episode_dir: Path, camera_name: str) -> int:
+    camera_dir = Path(episode_dir) / "obs" / camera_name
+    if not camera_dir.exists():
+        return 0
+    return len(sorted(camera_dir.glob("*.jpg")))

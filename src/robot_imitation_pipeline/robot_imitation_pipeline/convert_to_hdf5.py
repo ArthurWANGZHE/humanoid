@@ -24,12 +24,14 @@ def convert(raw_root: Path, output_dir: Path, val_fraction: float, seed: int) ->
     states: List[np.ndarray] = []
     actions: List[np.ndarray] = []
     episode_index: List[np.ndarray] = []
+    episode_ends: List[int] = []
     splits = {"train": [], "val": []}
     manifest = []
+    sample_total = 0
     for ep_idx, episode in enumerate(episodes):
         arrays = load_episode_arrays(episode)
-        if "joint_pos" not in arrays or "actions" not in arrays:
-            print(f"Skipping {episode}: missing joint_pos/actions")
+        if "robot_state" not in arrays or "action" not in arrays:
+            print(f"Skipping {episode}: missing robot_state/action")
             continue
         state, action = split_state_action(arrays)
         if len(state) == 0:
@@ -38,6 +40,8 @@ def convert(raw_root: Path, output_dir: Path, val_fraction: float, seed: int) ->
         states.append(state)
         actions.append(action)
         episode_index.append(np.full(len(state), ep_idx, dtype=np.int64))
+        sample_total += len(state)
+        episode_ends.append(sample_total)
         split_name = "val" if ep_idx in val_set else "train"
         splits[split_name].append(ep_idx)
         meta = read_json(episode / "meta.json")
@@ -51,6 +55,9 @@ def convert(raw_root: Path, output_dir: Path, val_fraction: float, seed: int) ->
                 "success": read_json(episode / "success.json").get("success")
                 if (episode / "success.json").exists()
                 else None,
+                "valid_for_training": read_json(episode / "success.json").get("valid_for_training")
+                if (episode / "success.json").exists()
+                else None,
             }
         )
 
@@ -59,11 +66,15 @@ def convert(raw_root: Path, output_dir: Path, val_fraction: float, seed: int) ->
     state_all = np.concatenate(states, axis=0).astype(np.float32)
     action_all = np.concatenate(actions, axis=0).astype(np.float32)
     episode_index_all = np.concatenate(episode_index, axis=0)
+    episode_ends_all = np.asarray(episode_ends, dtype=np.int64)
     np.savez_compressed(
         output_dir / "dataset.npz",
         obs_state=state_all,
+        obs_robot_state=state_all,
         actions=action_all,
+        action=action_all,
         episode_index=episode_index_all,
+        episode_ends=episode_ends_all,
     )
     write_json(
         output_dir / "splits.json",
@@ -80,10 +91,14 @@ def convert(raw_root: Path, output_dir: Path, val_fraction: float, seed: int) ->
         return
     with h5py.File(output_dir / "dataset.hdf5", "w") as h5:
         h5.create_dataset("obs/state", data=state_all, compression="gzip")
+        h5.create_dataset("obs/robot_state", data=state_all, compression="gzip")
         h5.create_dataset("actions", data=action_all, compression="gzip")
+        h5.create_dataset("data/action", data=action_all, compression="gzip")
+        h5.create_dataset("data/robot_state", data=state_all, compression="gzip")
         h5.create_dataset("episode_index", data=episode_index_all, compression="gzip")
-        h5.attrs["format"] = "robot_imitation_pipeline_state_action_v0"
-        h5.attrs["action_mode"] = "joint_position_targets"
+        h5.create_dataset("meta/episode_ends", data=episode_ends_all, compression="gzip")
+        h5.attrs["format"] = "robot_imitation_pipeline_state_action_v1"
+        h5.attrs["action_mode"] = "joint_target"
     print(f"Wrote {len(state_all)} samples to {output_dir}")
 
 

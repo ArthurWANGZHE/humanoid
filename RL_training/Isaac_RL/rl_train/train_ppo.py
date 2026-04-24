@@ -82,6 +82,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--reach-threshold", type=float, default=None, help="Override the reached distance threshold in meters.")
     parser.add_argument("--use-grasp-tcp", default=None, help="Measure reaching from the grasp TCP offset instead of the raw wrist link.")
     parser.add_argument("--arm-action-scale", type=float, default=None, help="Override per-step arm joint action scale.")
+    parser.add_argument("--target-mode", type=str, default="brick", choices=("brick", "pregrasp"), help="Reach the brick center or a pre-grasp point above it.")
+    parser.add_argument("--pregrasp-height-offset", type=float, default=0.08, help="Height offset in meters for the pre-grasp target above the brick.")
+    parser.add_argument("--near-target-damping-distance", type=float, default=None, help="Start damping arm deltas inside this target distance in meters.")
+    parser.add_argument("--near-target-damping-min-scale", type=float, default=None, help="Minimum arm delta scale applied at zero target distance.")
     parser.add_argument("--reaching-brick-x-range", type=str, default=None, help="Override reaching-only brick x range as min,max.")
     parser.add_argument("--reaching-brick-y-range", type=str, default=None, help="Override reaching-only brick y range as min,max.")
     parser.add_argument("--reaching-home-overrides", type=str, default=None, help="Override reaching-only home joints as joint=value,joint=value.")
@@ -97,6 +101,10 @@ def make_env_factory(
     reach_threshold_phase: int | None = None,
     use_grasp_tcp: str | bool | None = None,
     arm_action_scale: float | None = None,
+    target_mode: str = "brick",
+    pregrasp_height_offset: float = 0.08,
+    near_target_damping_distance: float | None = None,
+    near_target_damping_min_scale: float | None = None,
     reaching_brick_range: dict[str, float] | None = None,
     reaching_home_overrides: dict[str, float] | None = None,
 ):
@@ -110,6 +118,10 @@ def make_env_factory(
             reach_threshold_phase=reach_threshold_phase,
             use_grasp_tcp=use_grasp_tcp,
             arm_action_scale=arm_action_scale,
+            target_mode=target_mode,
+            pregrasp_height_offset=pregrasp_height_offset,
+            near_target_damping_distance=near_target_damping_distance,
+            near_target_damping_min_scale=near_target_damping_min_scale,
             reaching_brick_range=reaching_brick_range,
             reaching_home_overrides=reaching_home_overrides,
         )
@@ -130,6 +142,8 @@ def make_env_factory(
                 "final_brick_height",
                 "reached_threshold",
                 "reach_threshold_phase",
+                "target_mode",
+                "pregrasp_height_offset",
                 "min_episode_distance",
                 "episode_reward",
                 "episode_length",
@@ -193,6 +207,10 @@ def main() -> None:
             reach_threshold_phase=args.reach_threshold_phase,
             use_grasp_tcp=args.use_grasp_tcp,
             arm_action_scale=args.arm_action_scale,
+            target_mode=args.target_mode,
+            pregrasp_height_offset=args.pregrasp_height_offset,
+            near_target_damping_distance=args.near_target_damping_distance,
+            near_target_damping_min_scale=args.near_target_damping_min_scale,
             reaching_brick_range=reaching_brick_range,
             reaching_home_overrides=reaching_home_overrides,
         )
@@ -256,6 +274,10 @@ def main() -> None:
                 reach_threshold_phase=args.reach_threshold_phase,
                 use_grasp_tcp=args.use_grasp_tcp,
                 arm_action_scale=args.arm_action_scale,
+                target_mode=args.target_mode,
+                pregrasp_height_offset=args.pregrasp_height_offset,
+                near_target_damping_distance=args.near_target_damping_distance,
+                near_target_damping_min_scale=args.near_target_damping_min_scale,
                 reaching_brick_range=reaching_brick_range,
                 reaching_home_overrides=reaching_home_overrides,
             ),
