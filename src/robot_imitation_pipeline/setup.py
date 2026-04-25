@@ -30,6 +30,7 @@ setup(
             "replay_demo = robot_imitation_pipeline.replay_demo:main",
             "convert_to_hdf5 = robot_imitation_pipeline.convert_to_hdf5:main",
             "train_bc = robot_imitation_pipeline.train_bc:main",
+            "usb_camera_publisher = robot_imitation_pipeline.nodes.usb_camera_publisher:main",
         ],
     },
 )

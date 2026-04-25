@@ -45,3 +45,18 @@ demo_recorder:
 
     camera_name: "right_wrist_camera"
     camera_topic: "/right_wrist_camera/image_raw"
+
+recording:
+  required_cameras:
+    - right_wrist_camera
+  optional_cameras:
+    - head_camera
+
+topics:
+  cameras:
+    right_wrist_camera:
+      image: /right_wrist_camera/image_raw
+      camera_info: /right_wrist_camera/camera_info
+    head_camera:
+      image: /head_camera/color/image_raw
+      camera_info: /head_camera/color/camera_info
