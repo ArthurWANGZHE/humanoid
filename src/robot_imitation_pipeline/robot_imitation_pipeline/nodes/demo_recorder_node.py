@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import rclpy
 from example_interfaces.msg import Bool, Float64MultiArray
+from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import Image, JointState
@@ -101,6 +102,9 @@ class DemoRecorder(Node):
         self.get_logger().info(f"Primary camera: {self.camera_name} -> {self.camera_topic}")
 
     def _declare_parameters(self) -> None:
+        string_array_desc = ParameterDescriptor(type=ParameterType.PARAMETER_STRING_ARRAY)
+
+        self.declare_parameter("output_dir", "")
         self.declare_parameter("save_root", "data/imitation_raw")
         self.declare_parameter("control_rate_hz", 10.0)
         self.declare_parameter("sample_rate_hz", 10.0)
@@ -109,17 +113,22 @@ class DemoRecorder(Node):
         self.declare_parameter("stale_topic_warn_sec", 1.0)
         self.declare_parameter("image_format", "jpg")
         self.declare_parameter("jpeg_quality", 92)
+        self.declare_parameter("image_width", 0)
+        self.declare_parameter("image_height", 0)
         self.declare_parameter("image_size", [224, 224])
         self.declare_parameter("control_mode", "joint_target")
         self.declare_parameter("action_mode", "joint_target")
         self.declare_parameter("task_name", "toy_brick_grasp")
         self.declare_parameter("robot_name", "humanoid")
         self.declare_parameter("require_joint_state_before_start", True)
+        self.declare_parameter("joint_states_topic", "")
         self.declare_parameter("joint_state_topic", "/joint_states")
         self.declare_parameter("left_joint_command_topic", "/left_joint_command")
+        self.declare_parameter("right_arm_command_topic", "")
         self.declare_parameter("right_joint_command_topic", "/right_joint_command")
         self.declare_parameter("neck_joint_command_topic", "/neck_joint_command")
         self.declare_parameter("left_gripper_topic", "/open_left_gripper")
+        self.declare_parameter("right_gripper_command_topic", "")
         self.declare_parameter("right_gripper_topic", "/open_right_gripper")
         self.declare_parameter(
             "left_joint_names",
@@ -131,6 +140,19 @@ class DemoRecorder(Node):
                 "left_wrist_pitch_joint",
                 "left_wrist_yaw_joint",
             ],
+            string_array_desc,
+        )
+        self.declare_parameter(
+            "right_arm_joint_names",
+            [
+                "right_base_pitch_joint",
+                "right_shoulder_roll_joint",
+                "right_shoulder_yaw_joint",
+                "right_elbow_pitch_joint",
+                "right_wrist_pitch_joint",
+                "right_wrist_yaw_joint",
+            ],
+            string_array_desc,
         )
         self.declare_parameter(
             "right_joint_names",
@@ -142,14 +164,54 @@ class DemoRecorder(Node):
                 "right_wrist_pitch_joint",
                 "right_wrist_yaw_joint",
             ],
+            string_array_desc,
         )
-        self.declare_parameter("neck_joint_names", ["neck_pitch_joint", "neck_yaw_joint"])
-        self.declare_parameter("gripper_joint_names", ["left_gripper1_joint", "right_gripper1_joint"])
+        self.declare_parameter(
+            "neck_joint_names",
+            ["neck_pitch_joint", "neck_yaw_joint"],
+            string_array_desc,
+        )
+        self.declare_parameter(
+            "gripper_joint_names",
+            ["left_gripper1_joint", "right_gripper1_joint"],
+            string_array_desc,
+        )
+        self.declare_parameter(
+            "required_cameras",
+            ["right_wrist_camera"],
+            string_array_desc,
+        )
+        self.declare_parameter(
+            "optional_cameras",
+            ["head_camera"],
+            string_array_desc,
+        )
+        self.declare_parameter(
+            "action_names",
+            [
+                "delta_right_base_pitch_joint",
+                "delta_right_shoulder_roll_joint",
+                "delta_right_shoulder_yaw_joint",
+                "delta_right_elbow_pitch_joint",
+                "delta_right_wrist_pitch_joint",
+                "delta_right_wrist_yaw_joint",
+                "right_gripper_command",
+            ],
+            string_array_desc,
+        )
+        self.declare_parameter("right_wrist_camera_image_topic", "")
+        self.declare_parameter("right_wrist_camera_info_topic", "")
+        self.declare_parameter("head_camera_image_topic", "")
+        self.declare_parameter("head_camera_info_topic", "")
         self.declare_parameter("camera_name", "right_wrist_camera")
         self.declare_parameter("camera_topic", "/right_wrist_camera/image_raw")
 
     def _load_parameters(self) -> None:
-        self.save_root = Path(self.get_parameter("save_root").value)
+        output_dir = str(self.get_parameter("output_dir").value)
+        if output_dir:
+            self.save_root = Path(output_dir)
+        else:
+            self.save_root = Path(self.get_parameter("save_root").value)
         if not self.save_root.is_absolute():
             self.save_root = Path.cwd() / self.save_root
         self.control_rate_hz = float(
@@ -160,7 +222,12 @@ class DemoRecorder(Node):
         self.stale_topic_warn_sec = float(self.get_parameter("stale_topic_warn_sec").value)
         self.image_format = str(self.get_parameter("image_format").value).lower()
         self.jpeg_quality = int(self.get_parameter("jpeg_quality").value)
-        self.image_size = [int(v) for v in self.get_parameter("image_size").value]
+        image_width = int(self.get_parameter("image_width").value)
+        image_height = int(self.get_parameter("image_height").value)
+        if image_width > 0 and image_height > 0:
+            self.image_size = [image_height, image_width]
+        else:
+            self.image_size = [int(v) for v in self.get_parameter("image_size").value]
         self.control_mode = str(
             self.get_parameter("control_mode").value or self.get_parameter("action_mode").value
         )
@@ -169,24 +236,53 @@ class DemoRecorder(Node):
         self.require_joint_state_before_start = bool(
             self.get_parameter("require_joint_state_before_start").value
         )
-        self.joint_state_topic = str(self.get_parameter("joint_state_topic").value)
+        self.joint_state_topic = str(
+            self.get_parameter("joint_states_topic").value or self.get_parameter("joint_state_topic").value
+        )
         self.left_joint_command_topic = str(self.get_parameter("left_joint_command_topic").value)
-        self.right_joint_command_topic = str(self.get_parameter("right_joint_command_topic").value)
+        self.right_joint_command_topic = str(
+            self.get_parameter("right_arm_command_topic").value
+            or self.get_parameter("right_joint_command_topic").value
+        )
         self.neck_joint_command_topic = str(self.get_parameter("neck_joint_command_topic").value)
         self.left_gripper_topic = str(self.get_parameter("left_gripper_topic").value)
-        self.right_gripper_topic = str(self.get_parameter("right_gripper_topic").value)
+        self.right_gripper_topic = str(
+            self.get_parameter("right_gripper_command_topic").value
+            or self.get_parameter("right_gripper_topic").value
+        )
         self.left_joint_names = list(self.get_parameter("left_joint_names").value)
-        self.right_joint_names = list(self.get_parameter("right_joint_names").value)
+        self.right_joint_names = list(
+            self.get_parameter("right_arm_joint_names").value or self.get_parameter("right_joint_names").value
+        )
         self.neck_joint_names = list(self.get_parameter("neck_joint_names").value)
         self.gripper_joint_names = list(self.get_parameter("gripper_joint_names").value)
-        self.camera_name = str(self.get_parameter("camera_name").value)
-        self.camera_topic = str(self.get_parameter("camera_topic").value)
+        self.required_cameras = list(self.get_parameter("required_cameras").value)
+        self.optional_cameras = list(self.get_parameter("optional_cameras").value)
+        right_wrist_camera_image_topic = str(self.get_parameter("right_wrist_camera_image_topic").value)
+        right_wrist_camera_info_topic = str(self.get_parameter("right_wrist_camera_info_topic").value)
+        head_camera_image_topic = str(self.get_parameter("head_camera_image_topic").value)
+        head_camera_info_topic = str(self.get_parameter("head_camera_info_topic").value)
+        self.camera_topics = {
+            "right_wrist_camera": {
+                "image": right_wrist_camera_image_topic or str(self.get_parameter("camera_topic").value),
+                "camera_info": right_wrist_camera_info_topic or "/right_wrist_camera/camera_info",
+                "required": "right_wrist_camera" in self.required_cameras,
+            },
+            "head_camera": {
+                "image": head_camera_image_topic or "/camera/camera/color/image_raw",
+                "camera_info": head_camera_info_topic or "/camera/camera/color/camera_info",
+                "required": "head_camera" in self.required_cameras,
+            },
+        }
+        self.camera_name = "right_wrist_camera"
+        self.camera_topic = self.camera_topics[self.camera_name]["image"]
         self.robot_state_names = (
             [f"{name}:position" for name in self.right_joint_names]
             + [f"{name}:velocity" for name in self.right_joint_names]
             + [f"{self.gripper_joint_names[1]}:position"]
         )
-        self.action_names = self.right_joint_names + ["right_gripper_command"]
+        action_names_param = list(self.get_parameter("action_names").value)
+        self.action_names = action_names_param or (self.right_joint_names + ["right_gripper_command"])
 
     def _joint_state_cb(self, msg: JointState) -> None:
         self.latest_joint_state = msg

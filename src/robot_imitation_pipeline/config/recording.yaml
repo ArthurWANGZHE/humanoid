@@ -1,6 +1,6 @@
 demo_recorder:
   ros__parameters:
-    save_root: "data/imitation_raw"
+    output_dir: "data/imitation_raw"
     control_rate_hz: 10.0
     sample_rate_hz: 10.0
     min_joint_state_hz: 5.0
@@ -8,19 +8,28 @@ demo_recorder:
     stale_topic_warn_sec: 1.0
     image_format: "jpg"
     jpeg_quality: 92
-    image_size: [224, 224]
+    image_width: 224
+    image_height: 224
     control_mode: "joint_target"
     action_mode: "joint_target"
     task_name: "toy_brick_grasp"
     robot_name: "humanoid"
     require_joint_state_before_start: true
 
-    joint_state_topic: "/joint_states"
+    joint_states_topic: "/joint_states"
     left_joint_command_topic: "/left_joint_command"
-    right_joint_command_topic: "/right_joint_command"
+    right_arm_command_topic: "/right_joint_command"
     neck_joint_command_topic: "/neck_joint_command"
     left_gripper_topic: "/open_left_gripper"
-    right_gripper_topic: "/open_right_gripper"
+    right_gripper_command_topic: "/open_right_gripper"
+
+    required_cameras: ["right_wrist_camera"]
+    optional_cameras: ["head_camera"]
+
+    right_wrist_camera_image_topic: "/right_wrist_camera/image_raw"
+    right_wrist_camera_info_topic: "/right_wrist_camera/camera_info"
+    head_camera_image_topic: "/head_camera/color/image_raw"
+    head_camera_info_topic: "/head_camera/color/camera_info"
 
     left_joint_names:
       - left_base_pitch_joint
@@ -29,7 +38,7 @@ demo_recorder:
       - left_elbow_pitch_joint
       - left_wrist_pitch_joint
       - left_wrist_yaw_joint
-    right_joint_names:
+    right_arm_joint_names:
       - right_base_pitch_joint
       - right_shoulder_roll_joint
       - right_shoulder_yaw_joint
@@ -43,20 +52,11 @@ demo_recorder:
       - left_gripper1_joint
       - right_gripper1_joint
 
-    camera_name: "right_wrist_camera"
-    camera_topic: "/right_wrist_camera/image_raw"
-
-recording:
-  required_cameras:
-    - right_wrist_camera
-  optional_cameras:
-    - head_camera
-
-topics:
-  cameras:
-    right_wrist_camera:
-      image: /right_wrist_camera/image_raw
-      camera_info: /right_wrist_camera/camera_info
-    head_camera:
-      image: /head_camera/color/image_raw
-      camera_info: /head_camera/color/camera_info
+    action_names:
+      - delta_right_base_pitch_joint
+      - delta_right_shoulder_roll_joint
+      - delta_right_shoulder_yaw_joint
+      - delta_right_elbow_pitch_joint
+      - delta_right_wrist_pitch_joint
+      - delta_right_wrist_yaw_joint
+      - right_gripper_command

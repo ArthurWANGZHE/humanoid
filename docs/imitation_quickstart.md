@@ -40,6 +40,16 @@ ros2 launch robot_imitation_pipeline demo_recorder.launch.py
 
 Default recording config lives at [recording.yaml](/home/arthur/humanoid/src/robot_imitation_pipeline/config/recording.yaml).
 
+If a YAML file is passed to ROS 2 with `--params-file`, it must use ROS 2 parameter-file format:
+
+```yaml
+demo_recorder:
+  ros__parameters:
+    key: value
+```
+
+Do not pass arbitrary nested application config YAML as a ROS 2 params file.
+
 Default output:
 
 ```text
