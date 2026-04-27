@@ -55,6 +55,8 @@ class DemoRecorder(Node):
 
         self.samples: List[Dict[str, np.ndarray]] = []
         self.saved_image_paths: Dict[str, List[str]] = {self.camera_name: []}
+        self.sample_skip_counts: Dict[str, int] = {}
+        self.last_missing_inputs: List[str] = []
         self.topic_wall_times: Dict[str, float] = {}
         self.topic_message_counts: Dict[str, int] = {}
         self.last_rate_check_wall = time.monotonic()
@@ -357,6 +359,8 @@ class DemoRecorder(Node):
         self.obs_dir.mkdir(parents=True, exist_ok=True)
         self.samples = []
         self.saved_image_paths = {self.camera_name: []}
+        self.sample_skip_counts = {}
+        self.last_missing_inputs = []
         self.required_warned = {}
         self.episode_start_wall = time.time()
         self.episode_start_ros = now_to_float(self.get_clock())
@@ -392,6 +396,8 @@ class DemoRecorder(Node):
         for idx, name in enumerate(self.gripper_joint_names[:2]):
             if name in name_to_pos:
                 self.latest_gripper_command[idx] = float(name_to_pos[name])
+                self.latest_action[14 + idx] = self.latest_gripper_command[idx]
+                self.latest_action_valid[14 + idx] = True
         if not np.isfinite(self.latest_action[15]):
             self.latest_action[15] = 0.0
             self.latest_action_valid[15] = False
@@ -413,7 +419,9 @@ class DemoRecorder(Node):
             return
         missing = self._missing_inputs()
         if missing:
+            self.last_missing_inputs = missing
             for field in missing:
+                self.sample_skip_counts[field] = self.sample_skip_counts.get(field, 0) + 1
                 if not self.required_warned.get(field):
                     self.get_logger().warn(f"Recorder waiting for required input: {field}")
                     self.required_warned[field] = True
@@ -443,6 +451,7 @@ class DemoRecorder(Node):
             "image_rel_path": image_rel_path,
         }
         self.samples.append(sample)
+        self.last_missing_inputs = []
         self.required_warned = {}
 
     def _missing_inputs(self) -> List[str]:
@@ -569,6 +578,11 @@ class DemoRecorder(Node):
             },
             "camera_topics": {self.camera_name: self.camera_topic},
             "camera_frame_counts": {self.camera_name: n},
+            "diagnostics": {
+                "sample_skip_counts": self.sample_skip_counts,
+                "last_missing_inputs": self.last_missing_inputs,
+                "topic_message_counts": self.topic_message_counts,
+            },
             "alignment_rule": "obs[i], robot_state[i] -> action[i]",
             "obs": {
                 self.camera_name: {
