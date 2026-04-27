@@ -114,6 +114,8 @@ def validate_episode(episode_dir: Path, rate_tolerance_hz: float) -> Dict[str, o
     report["frames"] = int(len(timestamps))
     report["robot_state_dim"] = int(robot_state.shape[1]) if robot_state.ndim == 2 else 0
     report["action_dim"] = int(action.shape[1]) if action.ndim == 2 else 0
+    if is_strict and len(timestamps) == 0:
+        issues.append("episode contains zero frames")
 
     if timestamps.ndim != 1:
         issues.append(f"timestamps shape should be [T], got {timestamps.shape}")
