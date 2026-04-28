@@ -1,0 +1,13 @@
+wrist_camera:
+  required: true
+  image_topic: /right_wrist_camera/image_raw
+  alternate_image_topics:
+    - /right_wrist_camera/image
+    - /camera/right_wrist/image_raw
+
+head_camera:
+  required: false
+  image_topic: /head_camera/color/image_raw
+  alternate_image_topics:
+    - /camera/camera/color/image_raw
+    - /camera/color/image_raw

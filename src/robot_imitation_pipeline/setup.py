@@ -31,6 +31,7 @@ setup(
             "convert_to_hdf5 = robot_imitation_pipeline.convert_to_hdf5:main",
             "train_bc = robot_imitation_pipeline.train_bc:main",
             "usb_camera_publisher = robot_imitation_pipeline.nodes.usb_camera_publisher:main",
+            "policy_inference_node = robot_imitation_pipeline.nodes.policy_inference_node:main",
         ],
     },
 )

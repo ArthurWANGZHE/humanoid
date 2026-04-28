@@ -4,7 +4,7 @@ dataset:
 
 model:
   input_dim: null
-  action_dim: 16
+  action_dim: null
   hidden_dim: 256
   num_layers: 3
 

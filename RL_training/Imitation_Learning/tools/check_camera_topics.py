@@ -9,8 +9,8 @@ from typing import Dict, List, Optional
 import yaml
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_CONFIG = REPO_ROOT / "configs" / "imitation" / "cameras.yaml"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_CONFIG = REPO_ROOT / "RL_training" / "Imitation_Learning" / "config" / "cameras.yaml"
 
 
 def run_command(cmd: List[str], timeout: float = 5.0) -> str:
@@ -74,7 +74,7 @@ def main() -> int:
     except ImportError as exc:
         raise SystemExit(
             "ROS 2 Python modules are not available. Source your ROS 2 environment before running "
-            "`python3 tools/check_camera_topics.py`."
+            "`python3 RL_training/Imitation_Learning/tools/check_camera_topics.py`."
         ) from exc
 
     class TopicProbe(Node):
