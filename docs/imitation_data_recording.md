@@ -65,7 +65,7 @@ ros2 launch robot_imitation_pipeline start_recording_cameras.launch.py \
 ```bash
 ros2 topic list | grep image
 ros2 topic hz /right_wrist_camera/image_raw
-python3 tools/check_camera_topics.py
+python3 RL_training/Imitation_Learning/tools/check_camera_topics.py
 ```
 
 如果 RealSense 启动失败，仅使用腕部相机即可继续录制。
@@ -118,7 +118,7 @@ ros2 run robot_imitation_pipeline validate_demo data/imitation_raw/episode_00000
 或使用本地脚本：
 
 ```bash
-python3 tools/validate_demo.py data/imitation_raw/episode_000001
+python3 RL_training/Imitation_Learning/tools/validate_demo.py data/imitation_raw/episode_000001
 ```
 
 验证内容包括：文件完整性、shape 一致性、NaN/Inf 检查、时间戳单调性、采样率、图像可读性、metadata 维度一致性。
@@ -128,14 +128,14 @@ python3 tools/validate_demo.py data/imitation_raw/episode_000001
 查看 episode 摘要：
 
 ```bash
-python3 tools/inspect_demo.py --episode data/imitation_raw/episode_000001
+python3 RL_training/Imitation_Learning/tools/inspect_demo.py --episode data/imitation_raw/episode_000001
 ```
 
 生成假数据用于测试：
 
 ```bash
-python3 tools/make_fake_demo.py --output data/imitation_raw/episode_fake_000001
-python3 tools/validate_demo.py data/imitation_raw/episode_fake_000001
+python3 RL_training/Imitation_Learning/tools/make_fake_demo.py --output data/imitation_raw/episode_fake_000001
+python3 RL_training/Imitation_Learning/tools/validate_demo.py data/imitation_raw/episode_fake_000001
 ```
 
 ## 9. 数据回放

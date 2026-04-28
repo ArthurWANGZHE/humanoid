@@ -68,7 +68,7 @@ Check that the required wrist topic exists before starting the recorder:
 ```bash
 ros2 topic list | grep image
 ros2 topic hz /right_wrist_camera/image_raw
-python3 tools/check_camera_topics.py
+python3 RL_training/Imitation_Learning/tools/check_camera_topics.py
 ```
 
 Start the real-robot stack and recorder:
