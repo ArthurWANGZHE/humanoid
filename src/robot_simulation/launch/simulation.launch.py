@@ -17,7 +17,6 @@ from launch.substitutions import (
 )
 from launch_ros.actions import Node, SetParameter
 from launch_ros.substitutions import FindPackageShare
-from ament_index_python.packages import get_package_share_directory
 import os
 
 def launch_setup(context: LaunchContext):
@@ -48,6 +47,7 @@ def launch_setup(context: LaunchContext):
     enable_rviz_cmd = LaunchConfiguration('rviz_cmd').perform(context).lower() == 'true'
     enable_rqt = LaunchConfiguration('rqt').perform(context).lower() == 'true'
     enable_topic_bridge = LaunchConfiguration('topic_bridge').perform(context).lower() == 'true'
+    enable_servo = LaunchConfiguration('servo').perform(context).lower() == 'true'
     
     # Controller enable flags
     enable_neck = LaunchConfiguration('neck').perform(context).lower() == 'true'
@@ -119,9 +119,27 @@ def launch_setup(context: LaunchContext):
         arguments=[
             "-name", "humanoid",
             "-topic", "/robot_description",
-            "-z", "0.1",
+            "-z", "0.9",
             "-x", "0",
-            "-y", "0"
+            "-y", "0",
+            "-Y", "1.5708",
+        ],
+        output="screen"
+    )
+
+    # Keep RViz/MoveIt's fixed world frame aligned with the Gazebo spawn pose.
+    static_tf_world_to_base = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        arguments=[
+            "--x", "0",
+            "--y", "0",
+            "--z", "0.9",
+            "--yaw", "1.5708",
+            "--pitch", "0",
+            "--roll", "0",
+            "--frame-id", "world",
+            "--child-frame-id", "base_link",
         ],
         output="screen"
     )
@@ -145,22 +163,18 @@ def launch_setup(context: LaunchContext):
         parameters=[{'use_sim_time': True}]
     )
     
-    # ============ 7. Controller Manager ============
-    controller_manager = Node(
-        package="controller_manager",
-        executable="ros2_control_node",
-        parameters=[
-            {"robot_description": Command(['xacro ', xacro_path, " use_gazebo:=true"])},
-            PathJoinSubstitution([pkg_description, "config", "ros2_controllers.yaml"])
-        ],
-        output="screen"
-    )
-    
-    # Controller spawners
+    # ============ 7. Controller Spawners ============
+    # Gazebo loads gz_ros2_control from the robot xacro and provides /controller_manager.
+    # Do not start a second ros2_control_node here; it races the Gazebo controller manager.
     joint_state_broadcaster = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
+        arguments=[
+            "joint_state_broadcaster",
+            "--controller-manager", "/controller_manager",
+            "--controller-manager-timeout", "40",
+            "--service-call-timeout", "40",
+        ],
         output="screen"
     )
     
@@ -172,7 +186,12 @@ def launch_setup(context: LaunchContext):
             Node(
                 package="controller_manager",
                 executable="spawner",
-                arguments=["neck_controller", "--controller-manager", "/controller_manager"],
+                arguments=[
+                    "neck_controller",
+                    "--controller-manager", "/controller_manager",
+                    "--controller-manager-timeout", "40",
+                    "--service-call-timeout", "40",
+                ],
                 output="screen"
             )
         )
@@ -182,7 +201,12 @@ def launch_setup(context: LaunchContext):
             Node(
                 package="controller_manager",
                 executable="spawner",
-                arguments=["right_arm_controller", "--controller-manager", "/controller_manager"],
+                arguments=[
+                    "right_arm_controller",
+                    "--controller-manager", "/controller_manager",
+                    "--controller-manager-timeout", "40",
+                    "--service-call-timeout", "40",
+                ],
                 output="screen"
             )
         )
@@ -192,7 +216,12 @@ def launch_setup(context: LaunchContext):
             Node(
                 package="controller_manager",
                 executable="spawner",
-                arguments=["left_arm_controller", "--controller-manager", "/controller_manager"],
+                arguments=[
+                    "left_arm_controller",
+                    "--controller-manager", "/controller_manager",
+                    "--controller-manager-timeout", "40",
+                    "--service-call-timeout", "40",
+                ],
                 output="screen"
             )
         )
@@ -202,7 +231,12 @@ def launch_setup(context: LaunchContext):
             Node(
                 package="controller_manager",
                 executable="spawner",
-                arguments=["right_gripper_controller", "--controller-manager", "/controller_manager"],
+                arguments=[
+                    "right_gripper_controller",
+                    "--controller-manager", "/controller_manager",
+                    "--controller-manager-timeout", "40",
+                    "--service-call-timeout", "40",
+                ],
                 output="screen"
             )
         )
@@ -212,7 +246,12 @@ def launch_setup(context: LaunchContext):
             Node(
                 package="controller_manager",
                 executable="spawner",
-                arguments=["left_gripper_controller", "--controller-manager", "/controller_manager"],
+                arguments=[
+                    "left_gripper_controller",
+                    "--controller-manager", "/controller_manager",
+                    "--controller-manager-timeout", "40",
+                    "--service-call-timeout", "40",
+                ],
                 output="screen"
             )
         )
@@ -223,6 +262,13 @@ def launch_setup(context: LaunchContext):
             pkg_moveit, '/launch/move_group.launch.py'
         ]),
         launch_arguments={'use_sim_time': 'true'}.items()
+    )
+
+    moveit_servo = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            FindPackageShare('servo_control'),
+            '/launch/servo.launch.py'
+        ])
     )
     
     # ============ 9. Commander Node ============
@@ -242,7 +288,13 @@ def launch_setup(context: LaunchContext):
         name="rviz2_simulation",
         output="screen",
         arguments=["-d", rviz_sim_config],
-        parameters=[{'use_sim_time': True}]
+        parameters=[{
+            "robot_description": Command([
+                'xacro ', xacro_path, " use_gazebo:=true"]),
+            "robot_description_semantic": Command([
+                'cat ', srdf_path]),
+            "use_sim_time": True,
+        }]
     )
     
     rviz_cmd = Node(
@@ -300,8 +352,8 @@ def launch_setup(context: LaunchContext):
         set_resource_path,
         gz_sim,
         robot_state_publisher,
+        static_tf_world_to_base,
         spawn_entity,
-        controller_manager,
         load_joint_state_broadcaster,
     ]
     
@@ -316,6 +368,9 @@ def launch_setup(context: LaunchContext):
     
     if enable_moveit:
         optional_nodes.append(moveit)
+
+    if enable_servo:
+        optional_nodes.append(moveit_servo)
 
         # Add commander node (using the same 'commander' argument)
     if LaunchConfiguration('commander').perform(context).lower() == 'true':
@@ -356,6 +411,12 @@ def generate_launch_description():
             'moveit',
             default_value='true',
             description='Enable MoveIt'
+        ),
+
+        DeclareLaunchArgument(
+            'servo',
+            default_value='false',
+            description='Enable MoveIt Servo'
         ),
         
         DeclareLaunchArgument(
