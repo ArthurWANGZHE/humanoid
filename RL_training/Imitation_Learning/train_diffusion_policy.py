@@ -5,8 +5,12 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from models.diffusion_policy import DiffusionPolicy
-from models.imitation_dataset import ImitationDataset
+try:
+    from .models.diffusion_policy import DiffusionPolicy
+    from .models.imitation_dataset import ImitationDataset
+except ImportError:
+    from models.diffusion_policy import DiffusionPolicy
+    from models.imitation_dataset import ImitationDataset
 
 
 def resolve_dataset_dir(path: str) -> Path:

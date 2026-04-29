@@ -32,18 +32,15 @@ def launch_setup(context: LaunchContext):
     
     # World file (default: empty.sdf)
     world_file_arg = LaunchConfiguration('world').perform(context)
-    if world_file_arg == 'empty.sdf' or world_file_arg.startswith('worlds/'):
-        world_file = PathJoinSubstitution([
-            pkg_simulation, "worlds", "empty.sdf"
-        ])
+    if os.path.isabs(world_file_arg):
+        world_file = world_file_arg
     else:
-        # Allow absolute paths or custom filenames
-        if os.path.isabs(world_file_arg):
-            world_file = world_file_arg
-        else:
-            world_file = PathJoinSubstitution([
-                pkg_simulation, "worlds", world_file_arg
-            ])
+        world_name = world_file_arg
+        if world_name.startswith('worlds/'):
+            world_name = world_name[len('worlds/'):]
+        world_file = PathJoinSubstitution([
+            pkg_simulation, "worlds", world_name
+        ])
     
     # Component enable/disable flags (all default to True)
     enable_moveit = LaunchConfiguration('moveit').perform(context).lower() == 'true'
@@ -62,6 +59,9 @@ def launch_setup(context: LaunchContext):
     # ============ 3. Paths ============
     xacro_path = PathJoinSubstitution([
         pkg_description, "urdf", "humanoid.urdf.xacro"
+    ])
+    srdf_path = PathJoinSubstitution([
+        pkg_moveit, "config", "humanoid.srdf"
     ])
     
     rviz_sim_config = PathJoinSubstitution([
@@ -251,7 +251,13 @@ def launch_setup(context: LaunchContext):
         name="rviz2_commander",
         output="screen",
         arguments=["-d", rviz_cmd_config],
-        parameters=[{'use_sim_time': True}]
+        parameters=[{
+            "robot_description": Command([
+                'xacro ', xacro_path, " use_gazebo:=true"]),
+            "robot_description_semantic": Command([
+                'cat ', srdf_path]),
+            "use_sim_time": True,
+        }]
     )
     
     rqt = Node(

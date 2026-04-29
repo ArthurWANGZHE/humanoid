@@ -6,3 +6,4 @@ log/
 __pycache__/
 *.pyc
 data/
+diffusion_policy_reference/

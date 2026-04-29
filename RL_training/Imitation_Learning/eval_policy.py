@@ -3,9 +3,14 @@ from pathlib import Path
 
 import numpy as np
 
-from models.imitation_dataset import ImitationDataset
-from policy import DiffusionPolicyWrapper
-from train_diffusion_policy import resolve_dataset_dir
+try:
+    from .models.imitation_dataset import ImitationDataset
+    from .policy import DiffusionPolicyWrapper
+    from .train_diffusion_policy import resolve_dataset_dir
+except ImportError:
+    from models.imitation_dataset import ImitationDataset
+    from policy import DiffusionPolicyWrapper
+    from train_diffusion_policy import resolve_dataset_dir
 
 
 def main():

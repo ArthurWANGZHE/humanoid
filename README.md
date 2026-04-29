@@ -27,8 +27,8 @@ It includes the core system implementation as well as supporting resources devel
 | Simulation environment setup | [docs/仿真环境配置.md](docs/仿真环境配置.md) |
 | Robot commander & MoveIt | [docs/robot_commander_README.md](docs/robot_commander_README.md) |
 | Keyboard teleoperation | [docs/keyboard_control_README.md](docs/keyboard_control_README.md) |
-| Imitation data logging | [docs/imitation_quickstart.md](docs/imitation_quickstart.md) |
-| Camera startup for recording | [docs/start_recording_cameras.md](docs/start_recording_cameras.md) |
+| Imitation data logging | [docs/imitation_data_recording.md](docs/imitation_data_recording.md) |
+| Camera startup for recording | [docs/imitation_data_recording.md](docs/imitation_data_recording.md) |
 | Servo control | [docs/伺服控制说明.md](docs/伺服控制说明.md) |
 | Hand-eye calibration | [docs/手眼标定说明.md](docs/手眼标定说明.md) |
 | RL training overview | [docs/RL_training.md](docs/RL_training.md) |
@@ -91,7 +91,7 @@ The recorder writes episodes under `data/imitation_raw`. To stop a failed run an
 ros2 run robot_imitation_pipeline demo_control stop --failure
 ```
 
-If the RealSense does not start, set `use_head_camera:=false` and continue recording with the wrist camera only. See [docs/start_recording_cameras.md](docs/start_recording_cameras.md) for device listing and troubleshooting, and [docs/imitation_quickstart.md](docs/imitation_quickstart.md) for the full recorder workflow.
+If the RealSense does not start, set `use_head_camera:=false` and continue recording with the wrist camera only. See [docs/imitation_data_recording.md](docs/imitation_data_recording.md) for device listing, troubleshooting, and the full recorder workflow.
 
 ## Notes
 

@@ -3,8 +3,12 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from models.diffusion_policy import DiffusionPolicy
-from train_diffusion_policy import make_schedule
+try:
+    from .models.diffusion_policy import DiffusionPolicy
+    from .train_diffusion_policy import make_schedule
+except ImportError:
+    from models.diffusion_policy import DiffusionPolicy
+    from train_diffusion_policy import make_schedule
 
 
 class DiffusionPolicyWrapper:
