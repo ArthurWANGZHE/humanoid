@@ -16,7 +16,9 @@
   <depend>moveit_servo</depend>
   <depend>python3-yaml</depend>
   <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
   <depend>std_srvs</depend>
+  <depend>trajectory_msgs</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
