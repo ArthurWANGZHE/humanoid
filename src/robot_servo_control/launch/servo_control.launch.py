@@ -29,6 +29,7 @@ def servo_node(namespace, yaml_file, moveit_config):
             moveit_config.robot_description,
             moveit_config.robot_description_semantic,
             moveit_config.robot_description_kinematics,
+            {"use_sim_time": True},
         ],
         remappings=[
             ("get_planning_scene", "/get_planning_scene"),
@@ -40,8 +41,7 @@ def servo_node(namespace, yaml_file, moveit_config):
 
 def generate_launch_description():
     moveit_config = (
-        MoveItConfigsBuilder("robot")
-        .robot_description(file_path="config/humanoid.urdf.xacro")
+        MoveItConfigsBuilder("humanoid", package_name="robot_moveit_config")
         .to_moveit_configs()
     )
 

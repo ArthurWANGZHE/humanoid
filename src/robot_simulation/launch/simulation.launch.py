@@ -16,6 +16,7 @@ from launch.substitutions import (
     LaunchConfiguration,
 )
 from launch_ros.actions import Node, SetParameter
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 import os
 
@@ -266,8 +267,8 @@ def launch_setup(context: LaunchContext):
 
     moveit_servo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
-            FindPackageShare('servo_control'),
-            '/launch/servo.launch.py'
+            FindPackageShare('robot_servo_control'),
+            '/launch/servo_control.launch.py'
         ])
     )
     
@@ -289,10 +290,14 @@ def launch_setup(context: LaunchContext):
         output="screen",
         arguments=["-d", rviz_sim_config],
         parameters=[{
-            "robot_description": Command([
-                'xacro ', xacro_path, " use_gazebo:=true"]),
-            "robot_description_semantic": Command([
-                'cat ', srdf_path]),
+            "robot_description": ParameterValue(
+                Command(['xacro ', xacro_path, " use_gazebo:=true"]),
+                value_type=str,
+            ),
+            "robot_description_semantic": ParameterValue(
+                Command(['cat ', srdf_path]),
+                value_type=str,
+            ),
             "use_sim_time": True,
         }]
     )
@@ -304,10 +309,14 @@ def launch_setup(context: LaunchContext):
         output="screen",
         arguments=["-d", rviz_cmd_config],
         parameters=[{
-            "robot_description": Command([
-                'xacro ', xacro_path, " use_gazebo:=true"]),
-            "robot_description_semantic": Command([
-                'cat ', srdf_path]),
+            "robot_description": ParameterValue(
+                Command(['xacro ', xacro_path, " use_gazebo:=true"]),
+                value_type=str,
+            ),
+            "robot_description_semantic": ParameterValue(
+                Command(['cat ', srdf_path]),
+                value_type=str,
+            ),
             "use_sim_time": True,
         }]
     )
@@ -415,7 +424,7 @@ def generate_launch_description():
 
         DeclareLaunchArgument(
             'servo',
-            default_value='false',
+            default_value='true',
             description='Enable MoveIt Servo'
         ),
         
