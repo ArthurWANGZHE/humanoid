@@ -61,6 +61,23 @@ def launch_setup(context: LaunchContext):
     xacro_path = PathJoinSubstitution([
         pkg_description, "urdf", "humanoid.urdf.xacro"
     ])
+    initial_positions_arg = LaunchConfiguration('initial_positions_file').perform(context)
+    if os.path.isabs(initial_positions_arg):
+        initial_positions_file = initial_positions_arg
+    else:
+        initial_positions_name = initial_positions_arg
+        if initial_positions_name.startswith('config/'):
+            initial_positions_name = initial_positions_name[len('config/'):]
+        initial_positions_file = PathJoinSubstitution([
+            pkg_description, "config", initial_positions_name
+        ])
+    robot_description_command = Command([
+        'xacro ',
+        xacro_path,
+        " use_gazebo:=true",
+        " initial_positions_file:=",
+        initial_positions_file,
+    ])
     srdf_path = PathJoinSubstitution([
         pkg_moveit, "config", "humanoid.srdf"
     ])
@@ -106,8 +123,7 @@ def launch_setup(context: LaunchContext):
         name="robot_state_publisher",
         output="screen",
         parameters=[{
-            "robot_description": Command([
-                'xacro ', xacro_path, " use_gazebo:=true"]),
+            "robot_description": robot_description_command,
             "publish_frequency": 1000.0,
             "use_sim_time": True,
         }]
@@ -292,7 +308,7 @@ def launch_setup(context: LaunchContext):
         arguments=["-d", rviz_sim_config],
         parameters=[{
             "robot_description": ParameterValue(
-                Command(['xacro ', xacro_path, " use_gazebo:=true"]),
+                robot_description_command,
                 value_type=str,
             ),
             "robot_description_semantic": ParameterValue(
@@ -311,7 +327,7 @@ def launch_setup(context: LaunchContext):
         arguments=["-d", rviz_cmd_config],
         parameters=[{
             "robot_description": ParameterValue(
-                Command(['xacro ', xacro_path, " use_gazebo:=true"]),
+                robot_description_command,
                 value_type=str,
             ),
             "robot_description_semantic": ParameterValue(
@@ -414,6 +430,12 @@ def generate_launch_description():
             'world',
             default_value='empty.sdf',
             description='World file name (in robot_simulation/worlds/) or absolute path'
+        ),
+
+        DeclareLaunchArgument(
+            'initial_positions_file',
+            default_value='initial_positions.yaml',
+            description='Initial positions YAML in robot_description/config/ or absolute path'
         ),
         
         # Component enable/disable flags (all default to True)

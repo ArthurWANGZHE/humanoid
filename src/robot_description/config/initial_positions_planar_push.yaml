@@ -1,0 +1,21 @@
+# Initial pose for planar right-arm pushing in Gazebo.
+# Places right_tcp_link near world (0.51, -0.14, 0.47) when the robot is spawned
+# by robot_simulation/simulation.launch.py at z=0.9, yaw=1.5708.
+
+initial_positions:
+  left_base_pitch_joint: 0
+  left_elbow_pitch_joint: 0
+  left_gripper1_joint: 0.005
+  left_shoulder_roll_joint: 0
+  left_shoulder_yaw_joint: 0
+  left_wrist_pitch_joint: 0
+  left_wrist_yaw_joint: 0
+  neck_pitch_joint: 0
+  neck_yaw_joint: 0
+  right_base_pitch_joint: -0.947
+  right_elbow_pitch_joint: -1.0076
+  right_gripper1_joint: 0.005
+  right_shoulder_roll_joint: -0.9805
+  right_shoulder_yaw_joint: -0.3191
+  right_wrist_pitch_joint: -1.1419
+  right_wrist_yaw_joint: -0.6683
