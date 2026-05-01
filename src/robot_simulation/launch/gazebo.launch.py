@@ -277,6 +277,7 @@ def launch_setup(context: LaunchContext):
             '/head_camera/image@sensor_msgs/msg/Image[ignition.msgs.Image',
             '/head_camera/depth_image@sensor_msgs/msg/Image[ignition.msgs.Image',
             '/head_camera/points@sensor_msgs/msg/PointCloud2[ignition.msgs.PointCloudPacked',
+            '/pusher/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
         ],
         output='screen'
     )
