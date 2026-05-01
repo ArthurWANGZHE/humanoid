@@ -52,6 +52,7 @@ class ArmPlanarControl(Node):
 
         self.vx = 0.0
         self.vy = 0.0
+        self.vz = 0.0
         self.last_key_time = 0.0
         self.running = True
         self.lock = threading.Lock()
@@ -98,9 +99,10 @@ class ArmPlanarControl(Node):
             "Arm planar control ready. WASD moves the right TCP on the table plane.\n"
             "  w/s: world +X / -X\n"
             "  a/d: world +Y / -Y\n"
+            "  e/c: up / down for setup\n"
             "  x or space: stop\n"
             "  q: quit\n"
-            "Assumed plane: world z ~= 0.47, table top z ~= 0.41.\n"
+            "Nominal push plane: world z ~= 0.47, table top z ~= 0.41.\n"
         )
 
     def keyboard_loop(self) -> None:
@@ -138,29 +140,33 @@ class ArmPlanarControl(Node):
             return
 
         with self.lock:
-            self.vx, self.vy = velocity
+            self.vx, self.vy, self.vz = velocity
             self.last_key_time = time.monotonic()
 
         self.get_logger().info(
-            f"right TCP planar velocity in base_link: x={self.vx:.3f}, y={self.vy:.3f}",
+            f"right TCP velocity in base_link: "
+            f"x={self.vx:.3f}, y={self.vy:.3f}, z={self.vz:.3f}",
             throttle_duration_sec=0.2,
         )
 
-    def key_to_base_velocity(self, key: str) -> Optional[Tuple[float, float]]:
+    def key_to_base_velocity(self, key: str) -> Optional[Tuple[float, float, float]]:
         speed = self.linear_speed
         # simulation.launch.py spawns the robot with yaw=+90deg:
         # world +X == base -Y, world +Y == base +X.
         return {
-            "w": (0.0, -speed),
-            "s": (0.0, speed),
-            "a": (speed, 0.0),
-            "d": (-speed, 0.0),
+            "w": (0.0, -speed, 0.0),
+            "s": (0.0, speed, 0.0),
+            "a": (speed, 0.0, 0.0),
+            "d": (-speed, 0.0, 0.0),
+            "e": (0.0, 0.0, speed),
+            "c": (0.0, 0.0, -speed),
         }.get(key)
 
     def stop(self) -> None:
         with self.lock:
             self.vx = 0.0
             self.vy = 0.0
+            self.vz = 0.0
             self.last_key_time = time.monotonic()
         self.publish_velocity()
 
@@ -168,6 +174,7 @@ class ArmPlanarControl(Node):
         with self.lock:
             vx = self.vx
             vy = self.vy
+            vz = self.vz
             elapsed = (
                 time.monotonic() - self.last_key_time
                 if self.last_key_time
@@ -181,15 +188,17 @@ class ArmPlanarControl(Node):
             ):
                 vx = 0.0
                 vy = 0.0
+                vz = 0.0
                 self.vx = 0.0
                 self.vy = 0.0
+                self.vz = 0.0
 
         msg = TwistStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = self.command_frame
         msg.twist.linear.x = float(vx)
         msg.twist.linear.y = float(vy)
-        msg.twist.linear.z = 0.0
+        msg.twist.linear.z = float(vz)
         msg.twist.angular.x = 0.0
         msg.twist.angular.y = 0.0
         msg.twist.angular.z = 0.0
