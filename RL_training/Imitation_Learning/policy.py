@@ -71,6 +71,6 @@ class DiffusionPolicyWrapper:
         return self.predict(robot_state_seq)[0]
 
 
-def act(robot_state_seq, checkpoint_path="logs/diffusion_policy/checkpoints/latest.pt"):
+def act(robot_state_seq, checkpoint_path="data/checkpoints/diffusion_policy/latest.pt"):
     policy = DiffusionPolicyWrapper(checkpoint_path)
     return policy.act(robot_state_seq)

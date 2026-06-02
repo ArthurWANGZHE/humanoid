@@ -11,6 +11,7 @@ import numpy as np
 from .config import RobotTrainingConfig
 from .isaac_import import import_urdf, verify_runtime_urdf
 from .pose_math import Pose, matrix_to_quat_wxyz, quat_wxyz_to_matrix
+from .urdf_validation import build_link_chain, validate_urdf_inputs
 
 
 _SIMULATION_APP = None
@@ -19,6 +20,7 @@ _SIMULATION_APP = None
 def get_simulation_app(headless: bool):
     global _SIMULATION_APP
     if _SIMULATION_APP is not None:
+        print("[lifecycle] reusing SimulationApp", {"headless": headless})
         return _SIMULATION_APP
 
     try:
@@ -26,11 +28,12 @@ def get_simulation_app(headless: bool):
     except ImportError:
         from omni.isaac.kit import SimulationApp
 
+    print("[lifecycle] creating SimulationApp", {"headless": headless})
     _SIMULATION_APP = SimulationApp({"headless": headless})
     return _SIMULATION_APP
 
 
-def load_isaac_modules() -> dict[str, object]:
+def load_isaac_modules(include_lula: bool = True) -> dict[str, object]:
     try:
         from isaacsim.core.api import World
         from isaacsim.core.api.objects import DynamicCuboid, FixedCuboid
@@ -44,19 +47,28 @@ def load_isaac_modules() -> dict[str, object]:
         from omni.isaac.core.utils.prims import get_prim_at_path
         from omni.isaac.core.utils.types import ArticulationAction
 
-    from isaacsim.robot_motion.motion_generation.lula.kinematics import LulaKinematicsSolver
-    from pxr import UsdGeom
+    from pxr import Gf, PhysicsSchemaTools, PhysxSchema, Usd, UsdGeom, UsdPhysics, UsdShade
 
-    return {
+    modules = {
         "World": World,
         "DynamicCuboid": DynamicCuboid,
         "FixedCuboid": FixedCuboid,
         "SingleArticulation": SingleArticulation,
         "get_prim_at_path": get_prim_at_path,
         "ArticulationAction": ArticulationAction,
-        "LulaKinematicsSolver": LulaKinematicsSolver,
+        "Gf": Gf,
+        "PhysicsSchemaTools": PhysicsSchemaTools,
+        "PhysxSchema": PhysxSchema,
+        "Usd": Usd,
         "UsdGeom": UsdGeom,
+        "UsdPhysics": UsdPhysics,
+        "UsdShade": UsdShade,
     }
+    if include_lula:
+        from isaacsim.robot_motion.motion_generation.lula.kinematics import LulaKinematicsSolver
+
+        modules["LulaKinematicsSolver"] = LulaKinematicsSolver
+    return modules
 
 
 def _parse_actuated_joint_names(urdf_path: Path) -> list[str]:
@@ -87,27 +99,31 @@ def parse_joint_origins(urdf_path: Path) -> dict[str, np.ndarray]:
 
 
 def validate_lula_inputs(training_config: RobotTrainingConfig) -> None:
-    link_names = _parse_urdf_link_names(training_config.urdf_path)
+    inspection = validate_urdf_inputs(
+        training_config.runtime_urdf_path,
+        root_link=training_config.urdf_root_link,
+        end_effector_link=training_config.end_effector_link,
+    )
     chosen_root_link = training_config.urdf_root_link
     chosen_ee_link = training_config.end_effector_link
+    link_chain = build_link_chain(
+        training_config.runtime_urdf_path,
+        chosen_root_link,
+        chosen_ee_link,
+    )
 
     print(
         "[demo] lula config validation",
         {
             "root_link": chosen_root_link,
             "end_effector_link": chosen_ee_link,
-            "urdf_path": str(training_config.urdf_path),
+            "source_urdf_path": str(training_config.urdf_path),
+            "resolved_urdf_path": str(training_config.runtime_urdf_path),
+            "link_chain": link_chain,
+            "link_count": inspection.total_links,
+            "joint_count": inspection.total_joints,
         },
     )
-
-    if chosen_root_link not in link_names:
-        raise ValueError(
-            f"Lula root link '{chosen_root_link}' does not exist in URDF {training_config.urdf_path}."
-        )
-    if chosen_ee_link not in link_names:
-        raise ValueError(
-            f"Lula end-effector link '{chosen_ee_link}' does not exist in URDF {training_config.urdf_path}."
-        )
 
 
 def materialize_lula_robot_description(training_config: RobotTrainingConfig) -> Path:
@@ -158,15 +174,56 @@ def materialize_lula_robot_description(training_config: RobotTrainingConfig) -> 
 class DemoSceneConfig:
     physics_dt: float = 1.0 / 60.0
     control_dt: float = 1.0 / 30.0
-    table_position: tuple[float, float, float] = (0.48, -0.24, 0.28)
-    table_scale: tuple[float, float, float] = (0.70, 0.50, 0.06)
+    table_position: tuple[float, float, float] = (0.48, -0.05, 0.28)
+    table_scale: tuple[float, float, float] = (0.62, 0.50, 0.045)
     brick_position: tuple[float, float, float] = (0.42, -0.28, 0.355)
     brick_scale: tuple[float, float, float] = (0.08, 0.04, 0.05)
     place_position: tuple[float, float, float] = (0.42, -0.14, 0.355)
+    pushcube_table_color_rgb: tuple[float, float, float] = (0.78, 0.72, 0.64)
+    pushcube_cube_mass: float = 0.20
+    pushcube_cube_static_friction: float = 1.0
+    pushcube_cube_dynamic_friction: float = 0.8
+    pushcube_cube_restitution: float = 0.0
+    pushcube_cube_linear_damping: float = 0.2
+    pushcube_cube_angular_damping: float = 0.2
+    pushcube_cube_contact_offset: float = 0.003
+    pushcube_cube_rest_offset: float = 0.0
+    pushcube_cube_solver_position_iterations: int = 16
+    pushcube_cube_solver_velocity_iterations: int = 4
+    pushcube_table_static_friction: float = 1.0
+    pushcube_table_dynamic_friction: float = 0.8
+    pushcube_table_restitution: float = 0.0
+    pushcube_table_contact_offset: float = 0.003
+    pushcube_table_rest_offset: float = 0.0
+    pushcube_gripper_static_friction: float = 1.0
+    pushcube_gripper_dynamic_friction: float = 0.8
+    pushcube_gripper_restitution: float = 0.0
+    pushcube_gripper_contact_offset: float = 0.003
+    pushcube_gripper_rest_offset: float = 0.0
+    pushcube_target_size_xy: tuple[float, float] = (0.16, 0.16)
+    pushcube_spawn_range_size_xy: tuple[float, float] = (0.18, 0.14)
+    pushcube_target_range_size_xy: tuple[float, float] = (0.22, 0.18)
+    pushcube_spawn_center_offset_xy: tuple[float, float] = (-0.08, -0.03)
+    pushcube_target_center_offset_xy: tuple[float, float] = (0.08, 0.06)
+    pushcube_overlay_thickness: float = 0.002
+    pushcube_overlay_z_offset: float = 0.002
 
     @property
     def table_height(self) -> float:
         return self.table_position[2] + (self.table_scale[2] / 2.0)
+
+
+@dataclass(frozen=True)
+class PushCubeSceneOptions:
+    enabled: bool = False
+    brick_size: float = 0.06
+    show_ranges: bool = False
+    presentation: bool = False
+    cube_margin: float = 0.08
+    target_margin: float = 0.06
+    cube_offset_from_table_center: tuple[float, float] | None = None
+    target_offset_from_table_center: tuple[float, float] | None = None
+    target_size_xy: tuple[float, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -179,13 +236,28 @@ class MountedCameraSpec:
 
 
 class HumanoidBrickPickDemoScene:
-    def __init__(self, training_config: RobotTrainingConfig, headless: bool, setup_cameras: bool = True) -> None:
+    def __init__(
+        self,
+        training_config: RobotTrainingConfig,
+        headless: bool,
+        setup_cameras: bool = True,
+        enable_lula: bool = True,
+        pushcube_options: PushCubeSceneOptions | None = None,
+    ) -> None:
         self.training_config = training_config
         self.headless = headless
         self.setup_cameras = setup_cameras
+        self.enable_lula = enable_lula
         self.scene_config = DemoSceneConfig()
+        self.pushcube_options = pushcube_options or PushCubeSceneOptions()
+        self.pushcube_show_ranges = bool(self.pushcube_options.show_ranges)
+        self.pushcube_layout_enabled = (
+            self.pushcube_options.enabled
+            or self.pushcube_options.show_ranges
+            or self.pushcube_options.presentation
+        )
         self._app = get_simulation_app(headless)
-        self._modules = load_isaac_modules()
+        self._modules = load_isaac_modules(include_lula=enable_lula)
 
         self._World = self._modules["World"]
         self._DynamicCuboid = self._modules["DynamicCuboid"]
@@ -193,8 +265,26 @@ class HumanoidBrickPickDemoScene:
         self._SingleArticulation = self._modules["SingleArticulation"]
         self._get_prim_at_path = self._modules["get_prim_at_path"]
         self._ArticulationAction = self._modules["ArticulationAction"]
-        self._LulaKinematicsSolver = self._modules["LulaKinematicsSolver"]
+        self._LulaKinematicsSolver = self._modules.get("LulaKinematicsSolver")
+        self._Gf = self._modules["Gf"]
+        self._PhysicsSchemaTools = self._modules["PhysicsSchemaTools"]
+        self._PhysxSchema = self._modules["PhysxSchema"]
+        self._Usd = self._modules["Usd"]
         self._UsdGeom = self._modules["UsdGeom"]
+        self._UsdPhysics = self._modules["UsdPhysics"]
+        self._UsdShade = self._modules["UsdShade"]
+        self.layout_visual_prim_paths: dict[str, str] = {}
+        self.layout_visibility_state: dict[str, bool] = {
+            "target_visible": False,
+            "cube_spawn_range_visible": False,
+            "target_range_visible": False,
+            "ranges_visible": False,
+        }
+        self.pushcube_layout: dict[str, object] | None = None
+        self.layout_gripper_qpos_before = np.zeros(0, dtype=np.float64)
+        self.layout_gripper_qpos_after = np.zeros(0, dtype=np.float64)
+        self.layout_gripper_max_abs_qpos_change = 0.0
+        self.layout_gripper_qpos_restored = False
         self.camera_mount_specs = {
             "head_camera": MountedCameraSpec(
                 camera_name="head_camera",
@@ -229,6 +319,12 @@ class HumanoidBrickPickDemoScene:
             rendering_dt=self.scene_config.physics_dt,
         )
         self.world.scene.add_default_ground_plane()
+        self.pushcube_layout = self._build_pushcube_layout()
+        table_color = (
+            self.scene_config.pushcube_table_color_rgb
+            if self.pushcube_layout_enabled
+            else (0.48, 0.32, 0.18)
+        )
 
         self.table = self.world.scene.add(
             self._FixedCuboid(
@@ -236,19 +332,30 @@ class HumanoidBrickPickDemoScene:
                 name="demo_table",
                 position=np.array(self.scene_config.table_position, dtype=np.float32),
                 scale=np.array(self.scene_config.table_scale, dtype=np.float32),
-                color=np.array([0.48, 0.32, 0.18], dtype=np.float32),
+                color=np.array(table_color, dtype=np.float32),
             )
+        )
+        brick_position = (
+            self.pushcube_layout["cube_position"]
+            if self.pushcube_layout_enabled and self.pushcube_layout is not None
+            else np.array(self.scene_config.brick_position, dtype=np.float32)
+        )
+        brick_scale = (
+            self.pushcube_layout["cube_scale"]
+            if self.pushcube_layout_enabled and self.pushcube_layout is not None
+            else np.array(self.scene_config.brick_scale, dtype=np.float32)
         )
         self.brick = self.world.scene.add(
             self._DynamicCuboid(
                 prim_path="/World/demo_brick",
                 name="demo_brick",
-                position=np.array(self.scene_config.brick_position, dtype=np.float32),
-                scale=np.array(self.scene_config.brick_scale, dtype=np.float32),
+                position=np.array(brick_position, dtype=np.float32),
+                scale=np.array(brick_scale, dtype=np.float32),
                 color=np.array([0.85, 0.18, 0.12], dtype=np.float32),
-                mass=0.05,
+                mass=self.scene_config.pushcube_cube_mass if self.pushcube_layout_enabled else 0.05,
             )
         )
+        self.initial_brick_position = np.array(brick_position, dtype=np.float32)
 
         print("[demo] source URDF:", self.training_config.urdf_path)
         verify_runtime_urdf(self.training_config.runtime_urdf_path)
@@ -265,24 +372,718 @@ class HumanoidBrickPickDemoScene:
         self.dof_names = list(self.articulation.dof_names)
         self.arm_indices = [self.dof_names.index(name) for name in self.training_config.arm_joints]
         self.gripper_indices = [self.dof_names.index(name) for name in self.training_config.gripper_joints]
+        if self.pushcube_layout_enabled:
+            self._create_pushcube_visuals_with_pose_guard()
         self.arm_lower, self.arm_upper = self._build_arm_bounds()
         if self.setup_cameras:
             self.setup_onboard_cameras()
 
         self.base_prim = self._get_prim_at_path(f"{self.robot_prim_path}/base_link")
         self.ee_prim = self._get_prim_at_path(f"{self.robot_prim_path}/{self.training_config.end_effector_link}")
+        self.pushcube_physics_summary: dict[str, object] = {}
+        if self.pushcube_layout_enabled:
+            self._apply_pushcube_physics_defaults()
+        self._print_scene_layout_diagnostics()
 
-        validate_lula_inputs(self.training_config)
-        self.robot_descriptor_path = materialize_lula_robot_description(training_config)
-        self.kinematics = self._LulaKinematicsSolver(
-            robot_description_path=str(self.robot_descriptor_path),
-            urdf_path=str(self.training_config.runtime_urdf_path),
+        self.robot_descriptor_path: Path | None = None
+        self.kinematics = None
+        if self.enable_lula:
+            validate_lula_inputs(self.training_config)
+            self.robot_descriptor_path = materialize_lula_robot_description(training_config)
+            self.kinematics = self._LulaKinematicsSolver(
+                robot_description_path=str(self.robot_descriptor_path),
+                urdf_path=str(self.training_config.runtime_urdf_path),
+            )
+            self.kinematics.set_default_position_tolerance(0.005)
+            self.kinematics.set_default_orientation_tolerance(0.08)
+            self.kinematics.set_default_cspace_seeds(
+                np.array([self.home_arm_positions()], dtype=np.float64)
+            )
+        else:
+            print("[demo] Lula disabled; scene loaded without LulaKinematicsSolver")
+
+    def _build_pushcube_layout(self) -> dict[str, object]:
+        table_center_xy = np.array(self.scene_config.table_position[:2], dtype=np.float64)
+        table_size_xy = np.array(self.scene_config.table_scale[:2], dtype=np.float64)
+        table_top_z = float(self.scene_config.table_height)
+        cube_size = float(self.pushcube_options.brick_size)
+        cube_offset_xy = self.pushcube_options.cube_offset_from_table_center
+        if cube_offset_xy is None:
+            cube_offset_xy = self.scene_config.pushcube_spawn_center_offset_xy
+        target_offset_xy = self.pushcube_options.target_offset_from_table_center
+        if target_offset_xy is None:
+            target_offset_xy = self.scene_config.pushcube_target_center_offset_xy
+        target_size_xy = self.pushcube_options.target_size_xy
+        if target_size_xy is None:
+            target_size_xy = self.scene_config.pushcube_target_size_xy
+        cube_preferred_xy = table_center_xy + np.array(
+            cube_offset_xy,
+            dtype=np.float64,
         )
-        self.kinematics.set_default_position_tolerance(0.005)
-        self.kinematics.set_default_orientation_tolerance(0.08)
-        self.kinematics.set_default_cspace_seeds(
-            np.array([self.home_arm_positions()], dtype=np.float64)
+        target_preferred_xy = table_center_xy + np.array(
+            target_offset_xy,
+            dtype=np.float64,
         )
+        cube_layout = self.place_rect_on_table(
+            cube_preferred_xy,
+            size_xy=np.array([cube_size, cube_size], dtype=np.float64),
+            requested_margin=self.pushcube_options.cube_margin,
+            fallback_margin=0.05,
+            label="cube_xy",
+        )
+        target_layout = self.place_rect_on_table(
+            target_preferred_xy,
+            size_xy=np.array(target_size_xy, dtype=np.float64),
+            requested_margin=self.pushcube_options.target_margin,
+            fallback_margin=0.05,
+            label="target_xy",
+        )
+        cube_center_xy = cube_layout["center_xy"]
+        target_center_xy = target_layout["center_xy"]
+        spawn_range_layout = self.place_rect_on_table(
+            cube_center_xy,
+            size_xy=np.array(self.scene_config.pushcube_spawn_range_size_xy, dtype=np.float64),
+            requested_margin=0.0,
+            fallback_margin=0.0,
+            label="cube_spawn_range",
+        )
+        target_range_layout = self.place_rect_on_table(
+            target_center_xy,
+            size_xy=np.array(self.scene_config.pushcube_target_range_size_xy, dtype=np.float64),
+            requested_margin=0.0,
+            fallback_margin=0.0,
+            label="target_range",
+        )
+        spawn_range_center_xy = spawn_range_layout["center_xy"]
+        target_range_center_xy = target_range_layout["center_xy"]
+        cube_z = table_top_z + (cube_size / 2.0)
+        overlay_z = table_top_z + self.scene_config.pushcube_overlay_z_offset
+        overlay_thickness = self.scene_config.pushcube_overlay_thickness
+        table_bounds = self.table_bounds_xy(margin=0.0)
+
+        return {
+            "cube_size": cube_size,
+            "cube_scale": np.array([cube_size, cube_size, cube_size], dtype=np.float32),
+            "cube_position": np.array([cube_center_xy[0], cube_center_xy[1], cube_z], dtype=np.float32),
+            "target_center": np.array([target_center_xy[0], target_center_xy[1], overlay_z], dtype=np.float32),
+            "target_size": np.array(
+                [
+                    target_size_xy[0],
+                    target_size_xy[1],
+                    overlay_thickness,
+                ],
+                dtype=np.float32,
+            ),
+            "spawn_range_center": np.array([spawn_range_center_xy[0], spawn_range_center_xy[1], overlay_z], dtype=np.float32),
+            "spawn_range_size": np.array(
+                [
+                    self.scene_config.pushcube_spawn_range_size_xy[0],
+                    self.scene_config.pushcube_spawn_range_size_xy[1],
+                    overlay_thickness,
+                ],
+                dtype=np.float32,
+            ),
+            "target_range_center": np.array([target_range_center_xy[0], target_range_center_xy[1], overlay_z], dtype=np.float32),
+            "target_range_size": np.array(
+                [
+                    self.scene_config.pushcube_target_range_size_xy[0],
+                    self.scene_config.pushcube_target_range_size_xy[1],
+                    overlay_thickness,
+                ],
+                dtype=np.float32,
+            ),
+            "table_top_z": table_top_z,
+            "overlay_z": overlay_z,
+            "table_center_xy": table_center_xy,
+            "table_size_xy": table_size_xy,
+            "table_bounds": table_bounds,
+            "cube_preferred_xy": cube_preferred_xy,
+            "target_preferred_xy": target_preferred_xy,
+            "cube_margin_to_table_edges": cube_layout["margin_to_edges"],
+            "target_margin_to_table_edges": target_layout["margin_to_edges"],
+            "cube_clamped": cube_layout["clamped"],
+            "target_clamped": target_layout["clamped"],
+            "cube_requested_margin": cube_layout["requested_margin"],
+            "target_requested_margin": target_layout["requested_margin"],
+            "cube_effective_margin": cube_layout["effective_margin"],
+            "target_effective_margin": target_layout["effective_margin"],
+            "cube_max_feasible_margin": cube_layout["max_feasible_margin"],
+            "target_max_feasible_margin": target_layout["max_feasible_margin"],
+            "spawn_range_clamped": spawn_range_layout["clamped"],
+            "target_range_clamped": target_range_layout["clamped"],
+        }
+
+    def _create_visual_box(
+        self,
+        prim_path: str,
+        center_xyz: np.ndarray,
+        size_xyz: np.ndarray,
+        color_rgb: tuple[float, float, float],
+        opacity: float,
+    ) -> str:
+        cube_geom = self._UsdGeom.Cube.Define(self.world.stage, prim_path)
+        cube_geom.CreateSizeAttr(1.0)
+        cube_geom.CreateDisplayColorAttr([self._Gf.Vec3f(*[float(v) for v in color_rgb])])
+        cube_geom.CreateDisplayOpacityAttr([float(opacity)])
+        xform = self._UsdGeom.XformCommonAPI(cube_geom)
+        xform.SetTranslate(tuple(float(v) for v in center_xyz))
+        xform.SetScale(tuple(float(v) for v in size_xyz))
+        return prim_path
+
+    def _set_visual_visibility(self, prim_path: str, visible: bool) -> None:
+        prim = self._get_prim_at_path(prim_path)
+        if prim is None or not prim.IsValid():
+            return
+        imageable = self._UsdGeom.Imageable(prim)
+        visibility = self._UsdGeom.Tokens.inherited if visible else self._UsdGeom.Tokens.invisible
+        imageable.GetVisibilityAttr().Set(visibility)
+
+    def _create_pushcube_visuals(self) -> None:
+        if self.pushcube_layout is None:
+            return
+
+        cube_spawn_range_visible = bool(self.pushcube_show_ranges)
+        target_range_visible = bool(self.pushcube_show_ranges)
+        self.layout_visual_prim_paths["target"] = self._create_visual_box(
+            "/World/pushcube_target",
+            np.array(self.pushcube_layout["target_center"], dtype=np.float32),
+            np.array(self.pushcube_layout["target_size"], dtype=np.float32),
+            (0.12, 0.78, 0.24),
+            0.45,
+        )
+        self.layout_visual_prim_paths["cube_spawn_range"] = self._create_visual_box(
+            "/World/cube_spawn_range",
+            np.array(self.pushcube_layout["spawn_range_center"], dtype=np.float32),
+            np.array(self.pushcube_layout["spawn_range_size"], dtype=np.float32),
+            (0.18, 0.48, 0.92),
+            0.22,
+        )
+        self.layout_visual_prim_paths["target_range"] = self._create_visual_box(
+            "/World/target_range",
+            np.array(self.pushcube_layout["target_range_center"], dtype=np.float32),
+            np.array(self.pushcube_layout["target_range_size"], dtype=np.float32),
+            (0.45, 0.92, 0.45),
+            0.18,
+        )
+        self._set_visual_visibility(self.layout_visual_prim_paths["target"], visible=True)
+        self._set_visual_visibility(
+            self.layout_visual_prim_paths["cube_spawn_range"],
+            visible=cube_spawn_range_visible,
+        )
+        self._set_visual_visibility(
+            self.layout_visual_prim_paths["target_range"],
+            visible=target_range_visible,
+        )
+        self.layout_visibility_state = {
+            "target_visible": True,
+            "cube_spawn_range_visible": cube_spawn_range_visible,
+            "target_range_visible": target_range_visible,
+            "ranges_visible": cube_spawn_range_visible and target_range_visible,
+        }
+
+    def _joint_position_debug_map(self, joint_positions: np.ndarray) -> dict[str, float]:
+        debug_joint_names = list(dict.fromkeys([*self.training_config.arm_joints, *self.training_config.gripper_joints]))
+        return {
+            joint_name: round(float(joint_positions[self.dof_names.index(joint_name)]), 6)
+            for joint_name in debug_joint_names
+            if joint_name in self.dof_names
+        }
+
+    def _create_pushcube_visuals_with_pose_guard(self) -> None:
+        before_positions = np.array(self.articulation.get_joint_positions(), dtype=np.float64)
+        before_gripper_positions = np.array(before_positions[self.gripper_indices], dtype=np.float64)
+        print("[pushcube-layout] enabled=True")
+        print("[pose-guard] robot qpos before layout =", self._joint_position_debug_map(before_positions))
+        self._create_pushcube_visuals()
+        after_positions = np.array(self.articulation.get_joint_positions(), dtype=np.float64)
+        delta = after_positions - before_positions
+        max_abs_change = float(np.max(np.abs(delta))) if delta.size else 0.0
+        after_gripper_positions = np.array(after_positions[self.gripper_indices], dtype=np.float64)
+        gripper_delta = after_gripper_positions - before_gripper_positions
+        gripper_max_abs_change = float(np.max(np.abs(gripper_delta))) if gripper_delta.size else 0.0
+        self.layout_gripper_qpos_before = before_gripper_positions
+        self.layout_gripper_qpos_after = after_gripper_positions
+        self.layout_gripper_max_abs_qpos_change = gripper_max_abs_change
+        self.layout_gripper_qpos_restored = False
+        print("[pose-guard] robot qpos after layout =", self._joint_position_debug_map(after_positions))
+        print(f"[pose-guard] max_abs_robot_qpos_change={max_abs_change:.6f}")
+        if gripper_max_abs_change > 1e-6:
+            print("[warning] pushcube layout modified gripper qpos; restoring original values")
+        if max_abs_change > 1e-6:
+            changed_joints = {
+                self.dof_names[index]: round(float(delta[index]), 6)
+                for index in range(len(self.dof_names))
+                if abs(float(delta[index])) > 1e-6
+            }
+            print("[pose-guard] ERROR layout modified robot pose", changed_joints)
+            self.articulation.set_joint_positions(before_positions)
+            self.articulation.set_joint_velocities(np.zeros(len(before_positions), dtype=np.float64))
+            self.articulation.apply_action(self._ArticulationAction(joint_positions=before_positions))
+            self.step_world(steps=1)
+            restored_positions = np.array(self.articulation.get_joint_positions(), dtype=np.float64)
+            restored_delta = restored_positions - before_positions
+            max_abs_change = float(np.max(np.abs(restored_delta))) if restored_delta.size else 0.0
+            self.layout_gripper_qpos_after = np.array(restored_positions[self.gripper_indices], dtype=np.float64)
+            restored_gripper_delta = self.layout_gripper_qpos_after - before_gripper_positions
+            self.layout_gripper_max_abs_qpos_change = (
+                float(np.max(np.abs(restored_gripper_delta))) if restored_gripper_delta.size else 0.0
+            )
+            self.layout_gripper_qpos_restored = True
+            print("[pose-guard] robot qpos restored =", self._joint_position_debug_map(restored_positions))
+            print(f"[pose-guard] max_abs_robot_qpos_change={max_abs_change:.6f}")
+        print(f"[pushcube-layout] robot_pose_modified={max_abs_change > 1e-6}")
+
+    def _prim_has_collision(self, prim) -> bool:
+        if prim is None or not prim.IsValid():
+            return False
+        if prim.HasAPI(self._UsdPhysics.CollisionAPI):
+            return True
+        for child in prim.GetChildren():
+            if self._prim_has_collision(child):
+                return True
+        return False
+
+    def _iter_descendants(self, prim):
+        if prim is None or not prim.IsValid():
+            return []
+        return self._Usd.PrimRange(prim)
+
+    def _collision_prims_under(self, prim) -> list[object]:
+        return [desc for desc in self._iter_descendants(prim) if desc.HasAPI(self._UsdPhysics.CollisionAPI)]
+
+    def _physics_material_prim_path(self, name: str) -> str:
+        return f"/World/physics_materials/{name}"
+
+    def _create_or_update_physics_material(
+        self,
+        *,
+        name: str,
+        static_friction: float,
+        dynamic_friction: float,
+        restitution: float,
+    ):
+        material = self._UsdShade.Material.Define(self.world.stage, self._physics_material_prim_path(name))
+        material_api = self._UsdPhysics.MaterialAPI.Apply(material.GetPrim())
+        material_api.CreateStaticFrictionAttr().Set(float(static_friction))
+        material_api.CreateDynamicFrictionAttr().Set(float(dynamic_friction))
+        material_api.CreateRestitutionAttr().Set(float(restitution))
+        self._PhysxSchema.PhysxMaterialAPI.Apply(material.GetPrim())
+        return material
+
+    def _bind_physics_material(self, prim, material) -> None:
+        if prim is None or not prim.IsValid():
+            return
+        binding_api = self._UsdShade.MaterialBindingAPI.Apply(prim)
+        binding_api.Bind(material, self._UsdShade.Tokens.weakerThanDescendants, "physics")
+
+    def _ensure_collision_api(self, prim, *, contact_offset: float, rest_offset: float) -> None:
+        if prim is None or not prim.IsValid():
+            return
+        collision_api = (
+            self._UsdPhysics.CollisionAPI(prim)
+            if prim.HasAPI(self._UsdPhysics.CollisionAPI)
+            else self._UsdPhysics.CollisionAPI.Apply(prim)
+        )
+        collision_api.CreateCollisionEnabledAttr(True)
+        physx_collision_api = (
+            self._PhysxSchema.PhysxCollisionAPI(prim)
+            if prim.HasAPI(self._PhysxSchema.PhysxCollisionAPI)
+            else self._PhysxSchema.PhysxCollisionAPI.Apply(prim)
+        )
+        physx_collision_api.CreateContactOffsetAttr().Set(float(contact_offset))
+        physx_collision_api.CreateRestOffsetAttr().Set(float(rest_offset))
+
+    def _ensure_rigid_body_dynamics(
+        self,
+        prim,
+        *,
+        mass: float,
+        linear_damping: float,
+        angular_damping: float,
+        solver_position_iterations: int,
+        solver_velocity_iterations: int,
+    ) -> None:
+        if prim is None or not prim.IsValid():
+            return
+        mass_api = self._UsdPhysics.MassAPI.Apply(prim)
+        mass_api.CreateMassAttr().Set(float(mass))
+        rigid_body_api = (
+            self._UsdPhysics.RigidBodyAPI(prim)
+            if prim.HasAPI(self._UsdPhysics.RigidBodyAPI)
+            else self._UsdPhysics.RigidBodyAPI.Apply(prim)
+        )
+        rigid_body_api.CreateRigidBodyEnabledAttr(True)
+        physx_rigid_body_api = (
+            self._PhysxSchema.PhysxRigidBodyAPI(prim)
+            if prim.HasAPI(self._PhysxSchema.PhysxRigidBodyAPI)
+            else self._PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
+        )
+        physx_rigid_body_api.CreateLinearDampingAttr().Set(float(linear_damping))
+        physx_rigid_body_api.CreateAngularDampingAttr().Set(float(angular_damping))
+        physx_rigid_body_api.CreateSolverPositionIterationCountAttr().Set(int(solver_position_iterations))
+        physx_rigid_body_api.CreateSolverVelocityIterationCountAttr().Set(int(solver_velocity_iterations))
+        physx_rigid_body_api.CreateEnableCCDAttr().Set(True)
+
+    def _set_mesh_collision_approximation(self, prim, approximation: str) -> None:
+        if prim is None or not prim.IsValid() or not prim.IsA(self._UsdGeom.Mesh):
+            return
+        mesh_collision_api = (
+            self._UsdPhysics.MeshCollisionAPI(prim)
+            if prim.HasAPI(self._UsdPhysics.MeshCollisionAPI)
+            else self._UsdPhysics.MeshCollisionAPI.Apply(prim)
+        )
+        mesh_collision_api.CreateApproximationAttr().Set(str(approximation))
+
+    def _collect_robot_link_collision_prims(self, link_names: list[str]) -> list[object]:
+        collision_prims: list[object] = []
+        seen_paths: set[str] = set()
+        for link_name in link_names:
+            link_prim = self._get_prim_at_path(f"{self.robot_prim_path}/{link_name}")
+            for collision_prim in self._collision_prims_under(link_prim):
+                prim_path = str(collision_prim.GetPath())
+                if prim_path in seen_paths:
+                    continue
+                seen_paths.add(prim_path)
+                collision_prims.append(collision_prim)
+        return collision_prims
+
+    def _collect_right_gripper_collision_prims(self) -> tuple[list[object], list[object]]:
+        gripper_collision_prims = self._collect_robot_link_collision_prims(
+            ["right_gripper1_link", "right_gripper2_link"]
+        )
+        wrist_collision_prims = self._collect_robot_link_collision_prims(
+            ["right_wrist_yaw_link", "right_wrist_pitch_link"]
+        )
+        if not gripper_collision_prims:
+            gripper_collision_prims = list(wrist_collision_prims)
+        return gripper_collision_prims, wrist_collision_prims
+
+    def _apply_pushcube_physics_defaults(self) -> None:
+        cube_material = self._create_or_update_physics_material(
+            name="pushcube_cube",
+            static_friction=self.scene_config.pushcube_cube_static_friction,
+            dynamic_friction=self.scene_config.pushcube_cube_dynamic_friction,
+            restitution=self.scene_config.pushcube_cube_restitution,
+        )
+        table_material = self._create_or_update_physics_material(
+            name="pushcube_table",
+            static_friction=self.scene_config.pushcube_table_static_friction,
+            dynamic_friction=self.scene_config.pushcube_table_dynamic_friction,
+            restitution=self.scene_config.pushcube_table_restitution,
+        )
+        gripper_material = self._create_or_update_physics_material(
+            name="pushcube_gripper",
+            static_friction=self.scene_config.pushcube_gripper_static_friction,
+            dynamic_friction=self.scene_config.pushcube_gripper_dynamic_friction,
+            restitution=self.scene_config.pushcube_gripper_restitution,
+        )
+
+        self._bind_physics_material(self.brick.prim, cube_material)
+        self._ensure_collision_api(
+            self.brick.prim,
+            contact_offset=self.scene_config.pushcube_cube_contact_offset,
+            rest_offset=self.scene_config.pushcube_cube_rest_offset,
+        )
+        self._ensure_rigid_body_dynamics(
+            self.brick.prim,
+            mass=self.scene_config.pushcube_cube_mass,
+            linear_damping=self.scene_config.pushcube_cube_linear_damping,
+            angular_damping=self.scene_config.pushcube_cube_angular_damping,
+            solver_position_iterations=self.scene_config.pushcube_cube_solver_position_iterations,
+            solver_velocity_iterations=self.scene_config.pushcube_cube_solver_velocity_iterations,
+        )
+
+        self._bind_physics_material(self.table.prim, table_material)
+        for collision_prim in self._collision_prims_under(self.table.prim):
+            self._ensure_collision_api(
+                collision_prim,
+                contact_offset=self.scene_config.pushcube_table_contact_offset,
+                rest_offset=self.scene_config.pushcube_table_rest_offset,
+            )
+
+        gripper_collision_prims, wrist_collision_prims = self._collect_right_gripper_collision_prims()
+        for collision_prim in gripper_collision_prims:
+            self._bind_physics_material(collision_prim, gripper_material)
+            self._ensure_collision_api(
+                collision_prim,
+                contact_offset=self.scene_config.pushcube_gripper_contact_offset,
+                rest_offset=self.scene_config.pushcube_gripper_rest_offset,
+            )
+            approximation = "convexHull" if "gripper" in str(collision_prim.GetPath()) else "boundingCube"
+            self._set_mesh_collision_approximation(collision_prim, approximation)
+        for collision_prim in wrist_collision_prims:
+            self._bind_physics_material(collision_prim, gripper_material)
+            self._ensure_collision_api(
+                collision_prim,
+                contact_offset=self.scene_config.pushcube_gripper_contact_offset,
+                rest_offset=self.scene_config.pushcube_gripper_rest_offset,
+            )
+            self._set_mesh_collision_approximation(collision_prim, "boundingCube")
+
+        self.pushcube_physics_summary = {
+            "cube_material_path": str(cube_material.GetPath()),
+            "table_material_path": str(table_material.GetPath()),
+            "gripper_material_path": str(gripper_material.GetPath()),
+            "gripper_collision_prim_paths": [str(prim.GetPath()) for prim in gripper_collision_prims],
+            "wrist_collision_prim_paths": [str(prim.GetPath()) for prim in wrist_collision_prims],
+        }
+        print(f"[cube-physics] mass={self.scene_config.pushcube_cube_mass:.3f}")
+        print(f"[cube-physics] static_friction={self.scene_config.pushcube_cube_static_friction:.3f}")
+        print(f"[cube-physics] dynamic_friction={self.scene_config.pushcube_cube_dynamic_friction:.3f}")
+        print(f"[cube-physics] restitution={self.scene_config.pushcube_cube_restitution:.3f}")
+        print(
+            "[cube-physics] damping="
+            f"{{'linear': {self.scene_config.pushcube_cube_linear_damping:.3f}, "
+            f"'angular': {self.scene_config.pushcube_cube_angular_damping:.3f}}}"
+        )
+        print(f"[table-physics] static={not self.table.prim.HasAPI(self._UsdPhysics.RigidBodyAPI)}")
+        print(f"[table-physics] collision={self._prim_has_collision(self.table.prim)}")
+        print(
+            "[table-physics] friction="
+            f"{{'static': {self.scene_config.pushcube_table_static_friction:.3f}, "
+            f"'dynamic': {self.scene_config.pushcube_table_dynamic_friction:.3f}, "
+            f"'restitution': {self.scene_config.pushcube_table_restitution:.3f}}}"
+        )
+        print("[gripper-physics] fixed_gripper=True")
+        print(
+            "[gripper-physics] collision_prims="
+            f"{[str(prim.GetPath()) for prim in gripper_collision_prims]}"
+        )
+        print(
+            "[gripper-physics] contact_pad_paths="
+            f"{[str(prim.GetPath()) for prim in wrist_collision_prims]}"
+        )
+        print(f"[gripper-physics] restitution={self.scene_config.pushcube_gripper_restitution:.3f}")
+        print(
+            "[gripper-physics] friction="
+            f"{{'static': {self.scene_config.pushcube_gripper_static_friction:.3f}, "
+            f"'dynamic': {self.scene_config.pushcube_gripper_dynamic_friction:.3f}}}"
+        )
+
+    def table_center_xy(self) -> np.ndarray:
+        return np.array(self.scene_config.table_position[:2], dtype=np.float64)
+
+    def table_size_xy(self) -> np.ndarray:
+        return np.array(self.scene_config.table_scale[:2], dtype=np.float64)
+
+    def table_bounds_xy(self, margin: float = 0.0) -> dict[str, float]:
+        center = self.table_center_xy()
+        half = (self.table_size_xy() / 2.0) - float(margin)
+        return {
+            "x_min": float(center[0] - half[0]),
+            "x_max": float(center[0] + half[0]),
+            "y_min": float(center[1] - half[1]),
+            "y_max": float(center[1] + half[1]),
+        }
+
+    def rect_bounds_xy(self, center_xy: np.ndarray, size_xy: np.ndarray) -> dict[str, float]:
+        half = np.array(size_xy, dtype=np.float64) / 2.0
+        center = np.array(center_xy, dtype=np.float64)
+        return {
+            "x_min": float(center[0] - half[0]),
+            "x_max": float(center[0] + half[0]),
+            "y_min": float(center[1] - half[1]),
+            "y_max": float(center[1] + half[1]),
+        }
+
+    def rect_margin_to_table_edges(self, center_xy: np.ndarray, size_xy: np.ndarray) -> dict[str, float]:
+        table_bounds = self.table_bounds_xy(margin=0.0)
+        rect_bounds = self.rect_bounds_xy(center_xy, size_xy)
+        margins = {
+            "x_min": float(rect_bounds["x_min"] - table_bounds["x_min"]),
+            "x_max": float(table_bounds["x_max"] - rect_bounds["x_max"]),
+            "y_min": float(rect_bounds["y_min"] - table_bounds["y_min"]),
+            "y_max": float(table_bounds["y_max"] - rect_bounds["y_max"]),
+        }
+        margins["min"] = min(margins.values())
+        return margins
+
+    def max_margin_inside_table(self, size_xy: np.ndarray) -> float:
+        table_half = self.table_size_xy() / 2.0
+        rect_half = np.array(size_xy, dtype=np.float64) / 2.0
+        feasible = np.min(table_half - rect_half)
+        return max(0.0, float(feasible))
+
+    def place_rect_on_table(
+        self,
+        center_xy: np.ndarray,
+        *,
+        size_xy: np.ndarray,
+        requested_margin: float,
+        fallback_margin: float,
+        label: str,
+    ) -> dict[str, object]:
+        requested_margin = max(0.0, float(requested_margin))
+        fallback_margin = max(0.0, float(fallback_margin))
+        size_xy = np.array(size_xy, dtype=np.float64)
+        max_feasible_margin = self.max_margin_inside_table(size_xy)
+        effective_margin = min(requested_margin, max_feasible_margin)
+        if requested_margin > 0.0 and max_feasible_margin < requested_margin:
+            effective_margin = max_feasible_margin
+        if fallback_margin > 0.0 and requested_margin <= 0.0:
+            effective_margin = min(fallback_margin, max_feasible_margin)
+        center = self.clamp_xy_inside_table(
+            center_xy,
+            size_xy=size_xy,
+            margin=effective_margin,
+            label=label,
+        )
+        clamped = not np.allclose(center, np.array(center_xy, dtype=np.float64))
+        return {
+            "center_xy": center,
+            "requested_margin": requested_margin,
+            "fallback_margin": fallback_margin,
+            "effective_margin": effective_margin,
+            "max_feasible_margin": max_feasible_margin,
+            "margin_to_edges": self.rect_margin_to_table_edges(center, size_xy),
+            "clamped": clamped,
+        }
+
+    def clamp_xy_inside_table(
+        self,
+        center_xy: np.ndarray,
+        *,
+        size_xy: np.ndarray,
+        margin: float,
+        label: str,
+    ) -> np.ndarray:
+        center = np.array(center_xy, dtype=np.float64)
+        half = np.array(size_xy, dtype=np.float64) / 2.0
+        bounds = self.table_bounds_xy(margin=0.0)
+        x_min = bounds["x_min"] + half[0] + float(margin)
+        x_max = bounds["x_max"] - half[0] - float(margin)
+        y_min = bounds["y_min"] + half[1] + float(margin)
+        y_max = bounds["y_max"] - half[1] - float(margin)
+        if x_min > x_max:
+            x_min = x_max = float(self.scene_config.table_position[0])
+        if y_min > y_max:
+            y_min = y_max = float(self.scene_config.table_position[1])
+        corrected = np.array(
+            [
+                np.clip(center[0], x_min, x_max),
+                np.clip(center[1], y_min, y_max),
+            ],
+            dtype=np.float64,
+        )
+        if not np.allclose(corrected, center):
+            print(
+                "[warning] pushcube layout clamped inside table",
+                {
+                    "label": label,
+                    "requested_xy": np.round(center, 4).tolist(),
+                    "corrected_xy": np.round(corrected, 4).tolist(),
+                    "table_bounds": {k: round(v, 4) for k, v in bounds.items()},
+                    "margin": round(float(margin), 4),
+                },
+            )
+        return corrected
+
+    def _print_scene_layout_diagnostics(self) -> None:
+        table_position, table_quaternion = self.table.get_world_pose()
+        brick_position, brick_quaternion = self.brick.get_world_pose()
+        table_bounds = self.table_bounds_xy(margin=0.0)
+        diagnostics: dict[str, object] = {
+            "table_pose": {
+                "position": np.round(np.array(table_position, dtype=np.float64), 4).tolist(),
+                "quaternion_wxyz": np.round(np.array(table_quaternion, dtype=np.float64), 4).tolist(),
+            },
+            "table_center": np.round(np.array(self.scene_config.table_position[:2], dtype=np.float64), 4).tolist(),
+            "table_size": np.round(np.array(self.scene_config.table_scale[:2], dtype=np.float64), 4).tolist(),
+            "table_bounds": {key: round(value, 4) for key, value in table_bounds.items()},
+            "table_top_z": round(float(self.scene_config.table_height), 4),
+            "table_collision_enabled": self._prim_has_collision(self.table.prim),
+            "brick_size": np.round(
+                np.array(
+                    self.pushcube_layout["cube_scale"] if self.pushcube_layout_enabled else self.scene_config.brick_scale,
+                    dtype=np.float64,
+                ),
+                4,
+            ).tolist(),
+            "brick_pose": {
+                "position": np.round(np.array(brick_position, dtype=np.float64), 4).tolist(),
+                "quaternion_wxyz": np.round(np.array(brick_quaternion, dtype=np.float64), 4).tolist(),
+            },
+            "brick_collision_enabled": self._prim_has_collision(self.brick.prim),
+        }
+        if self.pushcube_layout_enabled and self.pushcube_layout is not None:
+            diagnostics.update(
+                {
+                    "cube_size": round(float(self.pushcube_layout["cube_size"]), 4),
+                    "cube_pose": np.round(np.array(self.pushcube_layout["cube_position"], dtype=np.float64), 4).tolist(),
+                    "cube_xy": np.round(
+                        np.array(self.pushcube_layout["cube_position"][:2], dtype=np.float64),
+                        4,
+                    ).tolist(),
+                    "expected_cube_z": round(float(self.pushcube_layout["cube_position"][2]), 4),
+                    "cube_margin_to_table_edges": {
+                        key: round(value, 4)
+                        for key, value in dict(self.pushcube_layout["cube_margin_to_table_edges"]).items()
+                    },
+                    "cube_clamped": bool(self.pushcube_layout["cube_clamped"]),
+                    "target_center": np.round(np.array(self.pushcube_layout["target_center"], dtype=np.float64), 4).tolist(),
+                    "target_xy": np.round(
+                        np.array(self.pushcube_layout["target_center"][:2], dtype=np.float64),
+                        4,
+                    ).tolist(),
+                    "target_size": np.round(np.array(self.pushcube_layout["target_size"], dtype=np.float64), 4).tolist(),
+                    "target_z": round(float(self.pushcube_layout["target_center"][2]), 4),
+                    "target_margin_to_table_edges": {
+                        key: round(value, 4)
+                        for key, value in dict(self.pushcube_layout["target_margin_to_table_edges"]).items()
+                    },
+                    "target_clamped": bool(self.pushcube_layout["target_clamped"]),
+                    "cube_requested_margin": round(float(self.pushcube_layout["cube_requested_margin"]), 4),
+                    "target_requested_margin": round(float(self.pushcube_layout["target_requested_margin"]), 4),
+                    "cube_effective_margin": round(float(self.pushcube_layout["cube_effective_margin"]), 4),
+                    "target_effective_margin": round(float(self.pushcube_layout["target_effective_margin"]), 4),
+                    "cube_spawn_range": {
+                        "center": np.round(
+                            np.array(self.pushcube_layout["spawn_range_center"], dtype=np.float64), 4
+                        ).tolist(),
+                        "bounds": {
+                            key: round(value, 4)
+                            for key, value in self.rect_bounds_xy(
+                                np.array(self.pushcube_layout["spawn_range_center"][:2], dtype=np.float64),
+                                np.array(self.pushcube_layout["spawn_range_size"][:2], dtype=np.float64),
+                            ).items()
+                        },
+                        "size": np.round(
+                            np.array(self.pushcube_layout["spawn_range_size"], dtype=np.float64), 4
+                        ).tolist(),
+                    },
+                    "target_range": {
+                        "center": np.round(
+                            np.array(self.pushcube_layout["target_range_center"], dtype=np.float64), 4
+                        ).tolist(),
+                        "bounds": {
+                            key: round(value, 4)
+                            for key, value in self.rect_bounds_xy(
+                                np.array(self.pushcube_layout["target_range_center"][:2], dtype=np.float64),
+                                np.array(self.pushcube_layout["target_range_size"][:2], dtype=np.float64),
+                            ).items()
+                        },
+                        "size": np.round(
+                            np.array(self.pushcube_layout["target_range_size"], dtype=np.float64), 4
+                        ).tolist(),
+                    },
+                    "spawn_range_clamped": bool(self.pushcube_layout["spawn_range_clamped"]),
+                    "target_range_clamped": bool(self.pushcube_layout["target_range_clamped"]),
+                    "target_collision_enabled": self._prim_has_collision(
+                        self._get_prim_at_path(self.layout_visual_prim_paths["target"])
+                    ),
+                    "cube_spawn_range_collision_enabled": self._prim_has_collision(
+                        self._get_prim_at_path(self.layout_visual_prim_paths["cube_spawn_range"])
+                    )
+                    if "cube_spawn_range" in self.layout_visual_prim_paths
+                    else False,
+                    "target_range_collision_enabled": self._prim_has_collision(
+                        self._get_prim_at_path(self.layout_visual_prim_paths["target_range"])
+                    )
+                    if "target_range" in self.layout_visual_prim_paths
+                    else False,
+                }
+            )
+        print("[demo] scene layout", diagnostics)
 
     def _camera_prim_path(self, spec: MountedCameraSpec) -> str:
         return f"{self.robot_prim_path}/{spec.mount_link}/{spec.camera_name}"
@@ -634,7 +1435,7 @@ class HumanoidBrickPickDemoScene:
         self.articulation.initialize()
         self.set_robot_root_pose()
         self.set_robot_home()
-        self.brick.set_world_pose(position=np.array(self.scene_config.brick_position, dtype=np.float32))
+        self.brick.set_world_pose(position=np.array(self.initial_brick_position, dtype=np.float32))
         self.brick.set_linear_velocity(np.zeros(3, dtype=np.float32))
         self.brick.set_angular_velocity(np.zeros(3, dtype=np.float32))
         self.step_world(steps=15)
@@ -644,6 +1445,8 @@ class HumanoidBrickPickDemoScene:
             self.world.step(render=not self.headless)
 
     def sync_kinematics_base_pose(self) -> None:
+        if self.kinematics is None:
+            raise RuntimeError("Lula is disabled for this scene.")
         base_pose = self.get_base_pose()
         self.kinematics.set_robot_base_pose(base_pose.position, base_pose.quaternion_wxyz)
 
@@ -655,6 +1458,8 @@ class HumanoidBrickPickDemoScene:
         position_tolerance: float = 0.005,
         orientation_tolerance: float = 0.1,
     ) -> tuple[np.ndarray | None, bool]:
+        if self.kinematics is None:
+            raise RuntimeError("Lula is disabled for this scene.")
         self.sync_kinematics_base_pose()
         if warm_start is None:
             warm_start = self.current_arm_positions()

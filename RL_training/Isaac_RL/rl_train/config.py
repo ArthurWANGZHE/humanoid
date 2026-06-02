@@ -4,8 +4,9 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 import re
-import tempfile
 import xml.etree.ElementTree as ET
+
+from .urdf_validation import validate_urdf_inputs
 
 
 @dataclass(frozen=True)
@@ -67,7 +68,13 @@ def _resolve_urdf_path(robot_description_path: Path) -> Path:
     raise FileNotFoundError(f"Could not find humanoid URDF under {robot_description_path / 'urdf'}")
 
 
-def _rewrite_package_meshes(urdf_path: Path, robot_description_path: Path) -> Path:
+def _runtime_urdf_output_path(repo_root: Path, urdf_path: Path) -> Path:
+    generated_dir = repo_root / "generated"
+    generated_dir.mkdir(parents=True, exist_ok=True)
+    return generated_dir / f"{urdf_path.stem}.resolved.urdf"
+
+
+def _rewrite_package_meshes(repo_root: Path, urdf_path: Path, robot_description_path: Path) -> Path:
     urdf_text = urdf_path.read_text(encoding="utf-8")
     urdf_text = re.sub(
         r"package://robot_description/",
@@ -75,14 +82,20 @@ def _rewrite_package_meshes(urdf_path: Path, robot_description_path: Path) -> Pa
         urdf_text,
     )
 
-    runtime_dir = Path(tempfile.gettempdir()) / "rl_train"
-    runtime_dir.mkdir(parents=True, exist_ok=True)
-    runtime_urdf_path = runtime_dir / f"{urdf_path.stem}.resolved.urdf"
+    runtime_urdf_path = _runtime_urdf_output_path(repo_root, urdf_path)
     runtime_urdf_path.write_text(urdf_text, encoding="utf-8")
     if not runtime_urdf_path.exists() or not runtime_urdf_path.is_file():
         raise FileNotFoundError(f"Failed to materialize runtime URDF at {runtime_urdf_path}")
     if not os.access(runtime_urdf_path, os.R_OK):
         raise PermissionError(f"Runtime URDF is not readable: {runtime_urdf_path}")
+    validate_urdf_inputs(runtime_urdf_path)
+    print(
+        "[urdf] resolved runtime URDF",
+        {
+            "source_urdf_path": str(urdf_path),
+            "resolved_urdf_path": str(runtime_urdf_path),
+        },
+    )
     return runtime_urdf_path
 
 
@@ -287,7 +300,12 @@ def load_robot_training_config(
         resolved_repo_root, robot_description_path
     )
     urdf_path = _resolve_urdf_path(resolved_robot_description_path)
-    runtime_urdf_path = _rewrite_package_meshes(urdf_path, resolved_robot_description_path)
+    validate_urdf_inputs(urdf_path)
+    runtime_urdf_path = _rewrite_package_meshes(
+        resolved_repo_root,
+        urdf_path,
+        resolved_robot_description_path,
+    )
 
     actuated_joints, joint_limits, joint_child_links, link_names, urdf_root_link = _parse_urdf_joints(urdf_path)
     resolved_arm_joints = _resolve_joint_names(

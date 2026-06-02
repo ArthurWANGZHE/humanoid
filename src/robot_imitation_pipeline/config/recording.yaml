@@ -23,13 +23,13 @@ demo_recorder:
     left_gripper_topic: "/open_left_gripper"
     right_gripper_command_topic: "/open_right_gripper"
 
-    required_cameras: ["right_wrist_camera"]
-    optional_cameras: ["head_camera"]
+    required_cameras: []
+    optional_cameras: []
 
-    right_wrist_camera_image_topic: "/right_wrist_camera/image_raw"
-    right_wrist_camera_info_topic: "/right_wrist_camera/camera_info"
-    head_camera_image_topic: "/head_camera/color/image_raw"
-    head_camera_info_topic: "/head_camera/color/camera_info"
+    # right_wrist_camera_image_topic: "/right_wrist_camera/image_raw"
+    # right_wrist_camera_info_topic: "/right_wrist_camera/camera_info"
+    # head_camera_image_topic: "/head_camera/color/image_raw"
+    # head_camera_info_topic: "/head_camera/color/camera_info"
 
     left_joint_names:
       - left_base_pitch_joint

@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="851.4pt" height="596.52pt" viewBox="0 0 851.4 596.52" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-05-25T03:32:26.188402</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.8, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 596.52 
+L 851.4 596.52 
+L 851.4 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 23.94 170.1936 
+L 810.72 170.1936 
+L 810.72 53.7696 
+L 23.94 53.7696 
+z
+" clip-path="url(#p234543494a)" style="fill: #ffffff; stroke-dasharray: 5.18,2.24; stroke-dashoffset: 0; stroke: #000000; stroke-width: 1.4; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 241.56 414.684 
+L 593.1 414.684 
+L 593.1 193.4784 
+L 241.56 193.4784 
+z
+" clip-path="url(#p234543494a)" style="fill: #ffffff; stroke-dasharray: 5.18,2.24; stroke-dashoffset: 0; stroke: #000000; stroke-width: 1.4; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 23.94 531.108 
+L 810.72 531.108 
+L 810.72 437.9688 
+L 23.94 437.9688 
+z
+" clip-path="url(#p234543494a)" style="fill: #ffffff; stroke-dasharray: 5.18,2.24; stroke-dashoffset: 0; stroke: #000000; stroke-width: 1.4; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 49.05 123.624 
+L 266.67 123.624 
+L 266.67 77.0544 
+L 49.05 77.0544 
+z
+" clip-path="url(#p234543494a)" style="fill: #ffffff; stroke: #000000; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 325.26 123.624 
+L 509.4 123.624 
+L 509.4 77.0544 
+L 325.26 77.0544 
+z
+" clip-path="url(#p234543494a)" style="fill: #ffffff; stroke: #000000; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 551.25 123.624 
+L 785.61 123.624 
+L 785.61 77.0544 
+L 551.25 77.0544 
+z
+" clip-path="url(#p234543494a)" style="fill: #ffffff; stroke: #000000; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 258.3 205.1208 
+L 576.36 205.1208 
+L 576.36 164.3724 
+L 258.3 164.3724 
+z
+" clip-path="url(#p234543494a)" style="fill: #ffffff; stroke: #000000; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 258.3 263.3328 
+L 576.36 263.3328 
+L 576.36 222.5844 
+L 258.3 222.5844 
+z
+" clip-path="url(#p234543494a)" style="fill: #ffffff; stroke: #000000; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 258.3 321.5448 
+L 576.36 321.5448 
+L 576.36 280.7964 
+L 258.3 280.7964 
+z
+" clip-path="url(#p234543494a)" style="fill: #ffffff; stroke: #000000; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 258.3 379.7568 
+L 576.36 379.7568 
+L 576.36 339.0084 
+L 258.3 339.0084 
+z
+" clip-path="url(#p234543494a)" style="fill: #ffffff; stroke: #000000; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 174.6 507.8232 
+L 660.06 507.8232 
+L 660.06 461.2536 
+L 174.6 461.2536 
+z
+" clip-path="url(#p234543494a)" style="fill: #ffffff; stroke: #000000; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 576.36 286.6176 
+L 793.98 286.6176 
+L 793.98 170.1936 
+L 576.36 170.1936 
+z
+" clip-path="url(#p234543494a)" style="fill: #ffffff; stroke: #000000; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 417.33 207.120416 
+Q 417.33 213.853818 417.33 219.021973 
+" clip-path="url(#p234543494a)" style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+    <path d="M 419.93 213.821973 
+L 417.33 219.021973 
+L 414.73 213.821973 
+z
+" clip-path="url(#p234543494a)" style="stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+   </g>
+   <g id="patch_15">
+    <path d="M 417.33 265.332416 
+Q 417.33 272.065818 417.33 277.233973 
+" clip-path="url(#p234543494a)" style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+    <path d="M 419.93 272.033973 
+L 417.33 277.233973 
+L 414.73 272.033973 
+z
+" clip-path="url(#p234543494a)" style="stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+   </g>
+   <g id="patch_16">
+    <path d="M 417.33 323.544416 
+Q 417.33 330.277818 417.33 335.445973 
+" clip-path="url(#p234543494a)" style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+    <path d="M 419.93 330.245973 
+L 417.33 335.445973 
+L 414.73 330.245973 
+z
+" clip-path="url(#p234543494a)" style="stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+   </g>
+   <g id="patch_17">
+    <path d="M 157.86 164.3724 
+Q 287.595 164.3724 415.764752 164.3724 
+" clip-path="url(#p234543494a)" style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+    <path d="M 410.564752 161.7724 
+L 415.764752 164.3724 
+L 410.564752 166.9724 
+z
+" clip-path="url(#p234543494a)" style="stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+   </g>
+   <g id="patch_18">
+    <path d="M 417.33 123.624 
+Q 417.33 143.9982 417.33 162.807152 
+" clip-path="url(#p234543494a)" style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+    <path d="M 419.93 157.607152 
+L 417.33 162.807152 
+L 414.73 157.607152 
+z
+" clip-path="url(#p234543494a)" style="stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+   </g>
+   <g id="patch_19">
+    <path d="M 668.43 164.3724 
+Q 622.395 164.3724 577.925248 164.3724 
+" clip-path="url(#p234543494a)" style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+    <path d="M 583.125248 166.9724 
+L 577.925248 164.3724 
+L 583.125248 161.7724 
+z
+" clip-path="url(#p234543494a)" style="stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+   </g>
+   <g id="patch_20">
+    <path d="M 417.33 379.7568 
+Q 417.33 420.5052 417.33 459.688352 
+" clip-path="url(#p234543494a)" style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+    <path d="M 419.93 454.488352 
+L 417.33 459.688352 
+L 414.73 454.488352 
+z
+" clip-path="url(#p234543494a)" style="stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+   </g>
+   <g id="patch_21">
+    <path d="M 685.17 123.624 
+Q 685.17 146.9088 685.17 168.628352 
+" clip-path="url(#p234543494a)" style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+    <path d="M 687.77 163.428352 
+L 685.17 168.628352 
+L 682.57 163.428352 
+z
+" clip-path="url(#p234543494a)" style="stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_1">
+    <path d="M 157.86 123.624 
+L 157.86 164.3724 
+" clip-path="url(#p234543494a)" style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_2">
+    <path d="M 668.43 123.624 
+L 668.43 164.3724 
+" clip-path="url(#p234543494a)" style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: square"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 18px; font-family: 'Microsoft YaHei', sans-serif; text-anchor: middle" x="425.7" y="29.854069" transform="rotate(-0 425.7 29.854069)">net_01  DiffusionPolicy 网络结构</text>
+   </g>
+   <g id="text_2">
+    <g id="patch_22">
+     <path d="M 32.334 49.01628 
+L 112.634 49.01628 
+L 112.634 34.188624 
+L 32.334 34.188624 
+z
+" style="fill: #ffffff"/>
+    </g>
+    <text style="font-weight: 700; font-size: 11px; font-family: 'Microsoft YaHei', sans-serif; text-anchor: start" x="33.984" y="44.631749" transform="rotate(-0 33.984 44.631749)">输入层（三路）</text>
+   </g>
+   <g id="text_3">
+    <g id="patch_23">
+     <path d="M 249.954 188.72508 
+L 367.399625 188.72508 
+L 367.399625 173.753049 
+L 249.954 173.753049 
+z
+" style="fill: #ffffff"/>
+    </g>
+    <text style="font-weight: 700; font-size: 11px; font-family: 'Microsoft YaHei', sans-serif; text-anchor: start" x="251.604" y="184.196174" transform="rotate(-0 251.604 184.196174)">MLP  noise_pred_net</text>
+   </g>
+   <g id="text_4">
+    <g id="patch_24">
+     <path d="M 32.334 433.21548 
+L 57.634 433.21548 
+L 57.634 418.387824 
+L 32.334 418.387824 
+z
+" style="fill: #ffffff"/>
+    </g>
+    <text style="font-weight: 700; font-size: 11px; font-family: 'Microsoft YaHei', sans-serif; text-anchor: start" x="33.984" y="428.830949" transform="rotate(-0 33.984 428.830949)">输出</text>
+   </g>
+   <g id="text_5">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(129.81793 91.00545)">noisy_action</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(76.382656 102.923497)">[B, pred_horizon=16, action_dim=6]</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(120.539844 114.841544)">flatten -&gt; [B, 96]</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(374.239336 91.037364)">cond  (robot_state)</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(341.086563 102.955411)">[B, obs_horizon=2, state_dim=12]</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(380.009844 114.873458)">flatten -&gt; [B, 24]</text>
+   </g>
+   <g id="text_7">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(635.048633 91.073731)">timestep  t  [B]</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(591.055469 102.92795)">-&gt; SinusoidalEmbedding(dim=64)</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(647.171523 114.837091)">-&gt; [B, 64]</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(359.336953 181.435702)">torch.cat([x, c, te], dim=1)</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(364.553789 193.28992)">[B, 96 + 24 + 64 = 184]</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif; text-anchor: middle" x="417.33" y="245.574811" transform="rotate(-0 417.33 245.574811)">Linear(184 -&gt; 256)  +  ReLU</text>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif; text-anchor: middle" x="417.33" y="303.786811" transform="rotate(-0 417.33 303.786811)">Linear(256 -&gt; 256)  +  ReLU</text>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif; text-anchor: middle" x="417.33" y="361.998811" transform="rotate(-0 417.33 361.998811)">Linear(256 -&gt; 96)</text>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(309.540625 474.972716)">reshape -&gt; [B, pred_horizon=16, action_dim=6]</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(392.579531 486.890763)">pred_noise</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(334.422461 499.272677)">训练时：MSE(pred_noise, true_noise)</text>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(635.80043 195.108657)">SinusoidalEmbedding</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(627.963672 207.017797)">─────────────────</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(653.920195 219.011176)">half_dim = 32</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(617.733359 231.068383)">freqs = exp(-k * log10000/31)</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(651.152578 243.116684)">args = t * freqs</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(623.370273 255.025825)">emb = [sin(args), cos(args)]</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', sans-serif" transform="translate(663.911523 266.934965)">-&gt; [B, 64]</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p234543494a">
+   <rect x="7.2" y="7.2" width="837" height="582.12"/>
+  </clipPath>
+ </defs>
+</svg>

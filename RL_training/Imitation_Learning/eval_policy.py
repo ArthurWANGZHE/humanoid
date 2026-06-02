@@ -15,8 +15,8 @@ except ImportError:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--checkpoint", default="logs/diffusion_policy/checkpoints/latest.pt")
-    parser.add_argument("--dataset", default="dataset/raw")
+    parser.add_argument("--checkpoint", default="data/checkpoints/diffusion_policy/latest.pt")
+    parser.add_argument("--dataset", default="data/processed/real_robot/training_episodes")
     parser.add_argument("--max-samples", type=int, default=None)
     args = parser.parse_args()
 
@@ -25,7 +25,7 @@ def main():
         resolve_dataset_dir(args.dataset),
         obs_horizon=policy.config["obs_horizon"],
         pred_horizon=policy.config["pred_horizon"],
-        processed_dir=Path("dataset/processed"),
+        processed_dir=Path("data/processed/real_robot/stats"),
     )
 
     errors = []

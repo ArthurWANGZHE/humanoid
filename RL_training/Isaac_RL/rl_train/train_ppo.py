@@ -60,9 +60,10 @@ def _build_reaching_brick_range(args: argparse.Namespace) -> dict[str, float] | 
 
 def build_arg_parser() -> argparse.ArgumentParser:
     repo_root = Path(__file__).resolve().parents[1]
+    workspace_root = repo_root.parents[1]
     parser = argparse.ArgumentParser(description="Train PPO in Isaac Sim without ROS 2.")
     parser.add_argument("--timesteps", type=int, default=300_000)
-    parser.add_argument("--log-root", type=Path, default=repo_root / "logs" / "ppo_runs")
+    parser.add_argument("--log-root", type=Path, default=workspace_root / "data" / "simulation" / "isaac_rl" / "logs" / "ppo_runs")
     parser.add_argument("--headless", default="true")
     parser.add_argument("--num-envs", type=int, default=1)
     parser.add_argument("--robot-description-path", type=Path, default=repo_root / "assets" / "robot_description")

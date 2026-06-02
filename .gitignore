@@ -7,3 +7,4 @@ __pycache__/
 *.pyc
 data/
 diffusion_policy_reference/
+*.webm

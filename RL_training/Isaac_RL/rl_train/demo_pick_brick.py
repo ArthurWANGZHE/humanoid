@@ -23,7 +23,11 @@ import time
 
 import numpy as np
 
-from .brick_pick_demo_support import HumanoidBrickPickDemoScene, parse_joint_origins
+from .brick_pick_demo_support import (
+    HumanoidBrickPickDemoScene,
+    PushCubeSceneOptions,
+    parse_joint_origins,
+)
 from .config import RobotTrainingConfig, load_robot_training_config
 from .pose_math import Pose, compose_pose, invert_pose, rotation_matrix_from_axes
 
@@ -303,9 +307,17 @@ def load_robot(robot_description_path: Path) -> RobotTrainingConfig:
     return training_config
 
 
-def create_scene(training_config: RobotTrainingConfig, headless: bool) -> HumanoidBrickPickDemoScene:
+def create_scene(
+    training_config: RobotTrainingConfig,
+    headless: bool,
+    pushcube_options: PushCubeSceneOptions | None = None,
+) -> HumanoidBrickPickDemoScene:
     _log("create_scene", "Creating Isaac Sim world.", headless=headless)
-    scene = HumanoidBrickPickDemoScene(training_config=training_config, headless=headless)
+    scene = HumanoidBrickPickDemoScene(
+        training_config=training_config,
+        headless=headless,
+        pushcube_options=pushcube_options,
+    )
     _log("create_scene", "Scene created.", robot_prim_path=scene.robot_prim_path)
     return scene
 
@@ -983,6 +995,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--headless", default="false")
     parser.add_argument("--run-once", default="true")
     parser.add_argument("--enable-place", default="false")
+    parser.add_argument("--pushcube-layout", action="store_true")
+    parser.add_argument("--show-ranges", action="store_true")
+    parser.add_argument("--presentation", action="store_true")
+    parser.add_argument("--cube-margin", type=float, default=0.08)
+    parser.add_argument("--target-margin", type=float, default=0.06)
     parser.add_argument(
         "--robot-description-path",
         type=Path,
@@ -996,6 +1013,7 @@ def run_demo(
     headless: bool,
     run_once: bool,
     enable_place: bool,
+    pushcube_options: PushCubeSceneOptions | None = None,
 ) -> None:
     _log(
         "run_demo",
@@ -1003,11 +1021,18 @@ def run_demo(
         headless=headless,
         run_once=run_once,
         enable_place=enable_place,
+        pushcube_layout=bool(pushcube_options and pushcube_options.enabled),
+        show_ranges=bool(pushcube_options and pushcube_options.show_ranges),
+        presentation=bool(pushcube_options and pushcube_options.presentation),
     )
     scene: HumanoidBrickPickDemoScene | None = None
     try:
         training_config = load_robot(robot_description_path)
-        scene = create_scene(training_config=training_config, headless=headless)
+        scene = create_scene(
+            training_config=training_config,
+            headless=headless,
+            pushcube_options=pushcube_options,
+        )
         spawn_brick(scene)
         demo = BrickPickDemo(
             training_config=training_config,
@@ -1052,11 +1077,19 @@ def run_demo(
 
 def main() -> None:
     args = build_arg_parser().parse_args()
+    pushcube_options = PushCubeSceneOptions(
+        enabled=bool(args.pushcube_layout),
+        show_ranges=bool(args.show_ranges),
+        presentation=bool(args.presentation),
+        cube_margin=float(args.cube_margin),
+        target_margin=float(args.target_margin),
+    )
     run_demo(
         robot_description_path=args.robot_description_path.resolve(),
         headless=_to_bool(args.headless),
         run_once=_to_bool(args.run_once),
         enable_place=_to_bool(args.enable_place),
+        pushcube_options=pushcube_options,
     )
 
 

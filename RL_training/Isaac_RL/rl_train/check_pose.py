@@ -1,34 +1,16 @@
-"""Manual dual-arm pose tuning utility for Isaac Sim standalone.
-
-How to run:
-  ~/isaacsim/python.sh /home/arthur/Isaac_RL/check_pose.py --headless false
-
-Example commands:
-  names
-  show
-  deg
-  rad
-  home    # all-zero URDF joint pose
-  ready   # configured bent-arm ready pose used by demo/training resets
-  quit
-
-Example pose input:
-  0 0 0 -1.2 0.6 0  0 0 0 1.2 -0.6 0
-"""
+"""PushCube-ready Isaac scene inspection entrypoint."""
 
 from __future__ import annotations
 
 import argparse
-import queue
-import threading
-import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
-from .brick_pick_demo_support import HumanoidBrickPickDemoScene
+from .brick_pick_demo_support import HumanoidBrickPickDemoScene, PushCubeSceneOptions
 from .config import RobotTrainingConfig, load_robot_training_config
-from .demo_pick_brick import _to_bool
+from pushcube_isaac_v0.isaac_lifecycle import close_simulation_app, hold_viewer_open
 
 ARM_JOINT_NAMES = [
     "right_base_pitch_joint",
@@ -48,219 +30,201 @@ ARM_JOINT_NAMES = [
 SETTLE_STEPS = 30
 
 
+@dataclass(frozen=True)
+class CheckPoseSceneConfig:
+    pushcube_layout: bool = True
+    show_ranges: bool = False
+    cube_margin: float = 0.08
+    target_margin: float = 0.06
+    cube_offset_from_table_center: tuple[float, float] = (-0.08, -0.03)
+    target_offset_from_table_center: tuple[float, float] = (0.08, 0.06)
+    target_size_xy: tuple[float, float] = (0.16, 0.16)
+
+
+@dataclass(frozen=True)
+class CheckPoseRuntimeOptions:
+    headless: bool = False
+    show_ranges: bool = False
+    disable_lula: bool = False
+    hold_open: bool = False
+
+
+def _parse_bool_arg(value: str | bool | None) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return True
+    normalized = str(value).strip().lower()
+    if normalized in {"true", "1", "yes"}:
+        return True
+    if normalized in {"false", "0", "no"}:
+        return False
+    raise argparse.ArgumentTypeError(f"Expected one of true/false/1/0/yes/no, got: {value}")
+
+
+def _default_robot_description_path() -> Path:
+    return Path(__file__).resolve().parents[1] / "assets" / "robot_description"
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
-    repo_root = Path(__file__).resolve().parents[1]
-    parser = argparse.ArgumentParser(description="Interactive dual-arm pose checker for Isaac Sim standalone.")
-    parser.add_argument("--headless", default="false")
-    parser.add_argument(
-        "--robot-description-path",
-        type=Path,
-        default=repo_root / "assets" / "robot_description",
-    )
+    parser = argparse.ArgumentParser(description="Inspect the PushCube-ready Isaac scene.")
+    parser.add_argument("--headless", type=_parse_bool_arg, nargs="?", const=True, default=False)
+    parser.add_argument("--show-ranges", action="store_true")
+    parser.add_argument("--disable-lula", action="store_true")
+    parser.add_argument("--hold-open", action="store_true")
     return parser
 
 
-def load_robot(robot_description_path: Path) -> RobotTrainingConfig:
-    arm_joints_arg = ",".join(ARM_JOINT_NAMES)
+def load_robot() -> RobotTrainingConfig:
     return load_robot_training_config(
         repo_root=Path(__file__).resolve().parents[1],
-        robot_description_path=robot_description_path.resolve(),
-        arm_joints=arm_joints_arg,
+        robot_description_path=_default_robot_description_path().resolve(),
     )
 
 
-def create_scene(training_config: RobotTrainingConfig, headless: bool) -> HumanoidBrickPickDemoScene:
-    return HumanoidBrickPickDemoScene(training_config=training_config, headless=headless, setup_cameras=False)
+def create_scene(
+    training_config: RobotTrainingConfig,
+    runtime_options: CheckPoseRuntimeOptions,
+    scene_config: CheckPoseSceneConfig,
+) -> HumanoidBrickPickDemoScene:
+    pushcube_options = PushCubeSceneOptions(
+        enabled=scene_config.pushcube_layout,
+        show_ranges=scene_config.show_ranges,
+        presentation=False,
+        cube_margin=scene_config.cube_margin,
+        target_margin=scene_config.target_margin,
+        cube_offset_from_table_center=scene_config.cube_offset_from_table_center,
+        target_offset_from_table_center=scene_config.target_offset_from_table_center,
+        target_size_xy=scene_config.target_size_xy,
+    )
+    return HumanoidBrickPickDemoScene(
+        training_config=training_config,
+        headless=runtime_options.headless,
+        setup_cameras=False,
+        enable_lula=not runtime_options.disable_lula,
+        pushcube_options=pushcube_options,
+    )
 
 
-def get_target_joint_indices(scene: HumanoidBrickPickDemoScene) -> list[int]:
-    return [scene.dof_names.index(name) for name in ARM_JOINT_NAMES]
+def _print_startup_logs(runtime_options: CheckPoseRuntimeOptions, scene_config: CheckPoseSceneConfig) -> None:
+    print(f"[check_pose] headless={runtime_options.headless}")
+    print(f"[check_pose] disable_lula={runtime_options.disable_lula}")
+    print(f"[check_pose] hold_open={runtime_options.hold_open}")
+    print(f"[check_pose] show_ranges={runtime_options.show_ranges}")
+    print(f"[check_pose] pushcube_layout={scene_config.pushcube_layout}")
 
 
-def get_joint_limits(training_config: RobotTrainingConfig) -> list[tuple[float, float]]:
-    limits = []
-    for joint_name in ARM_JOINT_NAMES:
-        joint_limit = training_config.joint_limits.get(joint_name, {})
-        limits.append(
-            (
-                float(joint_limit.get("min_position", -3.14)),
-                float(joint_limit.get("max_position", 3.14)),
-            )
-        )
-    return limits
+def _print_layout_logs(scene: HumanoidBrickPickDemoScene, runtime_options: CheckPoseRuntimeOptions) -> None:
+    layout = scene.pushcube_layout or {}
+    visibility_state = scene.layout_visibility_state
+    cube_xy = [round(float(value), 4) for value in layout.get("cube_position", [0.0, 0.0])[:2]]
+    target_xy = [round(float(value), 4) for value in layout.get("target_center", [0.0, 0.0])[:2]]
+    cube_margin_min = round(
+        float(dict(layout.get("cube_margin_to_table_edges", {"min": 0.0})).get("min", 0.0)),
+        4,
+    )
+    target_margin_min = round(
+        float(dict(layout.get("target_margin_to_table_edges", {"min": 0.0})).get("min", 0.0)),
+        4,
+    )
+    print(f"[pushcube-layout] cube_xy={cube_xy}")
+    print(f"[pushcube-layout] target_xy={target_xy}")
+    print(f"[pushcube-layout] cube_margin_min={cube_margin_min}")
+    print(f"[pushcube-layout] target_margin_min={target_margin_min}")
+    print(f"[pushcube-layout] show_ranges_arg={runtime_options.show_ranges}")
+    print(f"[pushcube-layout] target_visible={visibility_state['target_visible']}")
+    print(f"[pushcube-layout] cube_spawn_range_visible={visibility_state['cube_spawn_range_visible']}")
+    print(f"[pushcube-layout] target_range_visible={visibility_state['target_range_visible']}")
+    print(f"[pushcube-layout] ranges_visible={visibility_state['ranges_visible']}")
 
 
-def print_joint_state(scene: HumanoidBrickPickDemoScene, target_indices: list[int]) -> None:
-    current_positions = np.array(scene.articulation.get_joint_positions(), dtype=np.float64)
-    print("[check_pose] current arm joint values")
-    for index, joint_name in enumerate(ARM_JOINT_NAMES):
-        joint_index = target_indices[index]
-        print(f"  {index:02d} {joint_name}: {current_positions[joint_index]: .4f}")
+def _rounded_joint_list(values: np.ndarray) -> list[float]:
+    return [round(float(value), 6) for value in np.array(values, dtype=np.float64).tolist()]
 
 
-def print_joint_names(scene: HumanoidBrickPickDemoScene, target_indices: list[int]) -> None:
-    print("[check_pose] arm joint mapping")
-    for index, joint_name in enumerate(ARM_JOINT_NAMES):
-        print(f"  {index:02d} -> dof {target_indices[index]:02d} -> {joint_name}")
+def _print_gripper_logs(scene: HumanoidBrickPickDemoScene) -> None:
+    joint_names = [joint_name for joint_name in scene.training_config.gripper_joints if joint_name in scene.dof_names]
+    qpos_before = np.array(scene.layout_gripper_qpos_before, dtype=np.float64)
+    qpos_after = np.array(scene.layout_gripper_qpos_after, dtype=np.float64)
+    max_abs_change = float(scene.layout_gripper_max_abs_qpos_change)
+    print("[gripper] fixed=True")
+    print("[gripper] controlled=False")
+    print(f"[gripper] joint_names={joint_names}")
+    print(f"[gripper] qpos_before={_rounded_joint_list(qpos_before)}")
+    print(f"[gripper] qpos_after={_rounded_joint_list(qpos_after)}")
+    print(f"[gripper] max_abs_qpos_change={max_abs_change}")
+    if scene.layout_gripper_qpos_restored:
+        print("[warning] pushcube layout changed gripper qpos; restored original values")
+    assert max_abs_change <= 1e-6, f"PushCube layout changed gripper qpos by {max_abs_change}"
 
 
-def print_end_effector_poses(scene: HumanoidBrickPickDemoScene) -> None:
-    right_pose = scene.get_link_pose("right_wrist_yaw_link")
-    left_pose = scene.get_link_pose("left_wrist_yaw_link")
-    print("[check_pose] right ee position", np.round(right_pose.position, 4).tolist())
-    print("[check_pose] right ee quaternion_wxyz", np.round(right_pose.quaternion_wxyz, 4).tolist())
-    print("[check_pose] left ee position", np.round(left_pose.position, 4).tolist())
-    print("[check_pose] left ee quaternion_wxyz", np.round(left_pose.quaternion_wxyz, 4).tolist())
-
-
-def hold_current_joint_positions(scene: HumanoidBrickPickDemoScene) -> None:
-    joint_positions = np.array(scene.articulation.get_joint_positions(), dtype=np.float64)
-    scene.articulation.set_joint_velocities(np.zeros_like(joint_positions))
-    scene.articulation.apply_action(scene._ArticulationAction(joint_positions=joint_positions))
-    print("[check_pose] holding imported joint positions", np.round(joint_positions, 4).tolist())
-
-
-def apply_pose(
+def _apply_original_check_pose_initial_pose(
     scene: HumanoidBrickPickDemoScene,
-    target_indices: list[int],
-    target_values: np.ndarray,
-    settle_steps: int = SETTLE_STEPS,
+    training_config: RobotTrainingConfig,
 ) -> None:
-    joint_positions = np.array(scene.articulation.get_joint_positions(), dtype=np.float64)
-    for i, joint_index in enumerate(target_indices):
-        joint_positions[joint_index] = float(target_values[i])
-    scene.articulation.set_joint_positions(joint_positions)
-    scene.articulation.set_joint_velocities(np.zeros_like(joint_positions))
-    scene.step_world(steps=max(1, settle_steps))
-    scene.articulation.set_joint_positions(joint_positions)
-    scene.articulation.set_joint_velocities(np.zeros_like(joint_positions))
-
-    print("[check_pose] requested values", np.round(target_values, 4).tolist())
-    print_joint_state(scene, target_indices)
-    print_end_effector_poses(scene)
-
-
-def warn_joint_limits(target_values: np.ndarray, limits: list[tuple[float, float]], input_mode: str) -> None:
-    violations = []
-    for i, value in enumerate(target_values):
-        lower, upper = limits[i]
-        if value < lower or value > upper:
-            violations.append({
-                "joint": ARM_JOINT_NAMES[i],
-                "value": round(float(value), 4),
-                "lower": round(lower, 4),
-                "upper": round(upper, 4),
-            })
-    if violations:
-        print(f"[warning] pose exceeds joint limits ({input_mode} input mode)", violations)
-
-
-def parse_pose_values(raw: str, input_mode: str) -> np.ndarray | None:
-    parts = raw.split()
-    if len(parts) != len(ARM_JOINT_NAMES):
-        print(f"[error] expected {len(ARM_JOINT_NAMES)} values, got {len(parts)}")
-        return None
-    try:
-        values = np.array([float(part) for part in parts], dtype=np.float64)
-    except ValueError:
-        print("[error] failed to parse numeric joint values")
-        return None
-    if input_mode == "deg":
-        values = np.deg2rad(values)
-    return values
-
-
-def input_worker(command_queue: queue.Queue[str]) -> None:
-    while True:
-        try:
-            command = input("check_pose> ").strip()
-        except EOFError:
-            command = "quit"
-        command_queue.put(command)
-        if command in {"quit", "exit"}:
-            break
-
-
-def interactive_loop(scene: HumanoidBrickPickDemoScene, training_config: RobotTrainingConfig) -> None:
-    command_queue: queue.Queue[str] = queue.Queue()
-    worker = threading.Thread(target=input_worker, args=(command_queue,), daemon=True)
-    worker.start()
-
-    target_indices = get_target_joint_indices(scene)
-    joint_limits = get_joint_limits(training_config)
-    input_mode = "rad"
-    home_pose = np.zeros(len(ARM_JOINT_NAMES), dtype=np.float64)
-    ready_pose = np.array(
-        [training_config.home_joint_positions.get(joint_name, 0.0) for joint_name in ARM_JOINT_NAMES],
-        dtype=np.float64,
+    print("[check_pose] using original robot initial pose")
+    joint_indices = []
+    target_positions = []
+    for joint_name in ARM_JOINT_NAMES:
+        if joint_name not in scene.dof_names:
+            continue
+        joint_indices.append(scene.dof_names.index(joint_name))
+        target_positions.append(float(training_config.home_joint_positions.get(joint_name, 0.0)))
+    if not joint_indices:
+        return
+    target_positions_array = np.array(target_positions, dtype=np.float64)
+    joint_indices_array = np.array(joint_indices, dtype=np.int32)
+    scene.articulation.set_joint_positions(target_positions_array, joint_indices=joint_indices_array)
+    scene.articulation.set_joint_velocities(
+        np.zeros(len(target_positions_array), dtype=np.float64),
+        joint_indices=joint_indices_array,
+    )
+    scene.step_world(steps=SETTLE_STEPS)
+    scene.articulation.set_joint_positions(target_positions_array, joint_indices=joint_indices_array)
+    scene.articulation.set_joint_velocities(
+        np.zeros(len(target_positions_array), dtype=np.float64),
+        joint_indices=joint_indices_array,
     )
 
-    print("[check_pose] startup mode: applying initial training pose (ready pose)")
-    print("[check_pose] command 'home' applies all-zero joints; command 'ready' applies demo/training ready pose")
-    apply_pose(scene, target_indices, ready_pose)
-    print_joint_names(scene, target_indices)
-    print("[check_pose] input mode: rad")
 
-    running = True
-    while running and scene._app.is_running():
-        scene.step_world(steps=1)
-        try:
-            command = command_queue.get_nowait()
-        except queue.Empty:
-            continue
-
-        if not command:
-            continue
-        if command in {"quit", "exit"}:
-            running = False
-            continue
-        if command == "show":
-            print_joint_state(scene, target_indices)
-            print_end_effector_poses(scene)
-            continue
-        if command == "names":
-            print_joint_names(scene, target_indices)
-            continue
-        if command == "deg":
-            input_mode = "deg"
-            print("[check_pose] input mode: deg")
-            continue
-        if command == "rad":
-            input_mode = "rad"
-            print("[check_pose] input mode: rad")
-            continue
-        if command == "home":
-            apply_pose(scene, target_indices, home_pose)
-            continue
-        if command == "ready":
-            apply_pose(scene, target_indices, ready_pose)
-            continue
-
-        values = parse_pose_values(command, input_mode)
-        if values is None:
-            continue
-        warn_joint_limits(values, joint_limits, input_mode)
-        apply_pose(scene, target_indices, values)
+def _show_scene(scene: HumanoidBrickPickDemoScene, runtime_options: CheckPoseRuntimeOptions) -> None:
+    warmup_steps = 120 if not runtime_options.headless else 15
+    scene.step_world(steps=warmup_steps)
+    if runtime_options.hold_open:
+        hold_viewer_open(scene, scene._app, render=not runtime_options.headless)
 
 
-def run_check_pose(robot_description_path: Path, headless: bool) -> None:
+def run_check_pose(runtime_options: CheckPoseRuntimeOptions) -> None:
     scene: HumanoidBrickPickDemoScene | None = None
+    scene_config = CheckPoseSceneConfig(show_ranges=runtime_options.show_ranges)
+    _print_startup_logs(runtime_options, scene_config)
     try:
-        training_config = load_robot(robot_description_path)
-        scene = create_scene(training_config=training_config, headless=headless)
-        hold_current_joint_positions(scene)
-        interactive_loop(scene, training_config)
+        training_config = load_robot()
+        scene = create_scene(training_config=training_config, runtime_options=runtime_options, scene_config=scene_config)
+        _print_gripper_logs(scene)
+        _apply_original_check_pose_initial_pose(scene, training_config)
+        _print_layout_logs(scene, runtime_options)
+        print("[lifecycle] check_pose scene ready")
+        print(f"[lifecycle] hold_open={runtime_options.hold_open}")
+        _show_scene(scene, runtime_options)
     finally:
         if scene is not None:
             scene.close()
+            print("[lifecycle] closing SimulationApp")
+            close_simulation_app(scene._app)
 
 
 def main() -> None:
     args = build_arg_parser().parse_args()
-    run_check_pose(
-        robot_description_path=args.robot_description_path.resolve(),
-        headless=_to_bool(args.headless),
+    print(f"[check_pose] headless={args.headless}")
+    print(f"[check_pose] show_ranges={args.show_ranges}")
+    runtime_options = CheckPoseRuntimeOptions(
+        headless=args.headless,
+        show_ranges=args.show_ranges,
+        disable_lula=args.disable_lula,
+        hold_open=args.hold_open,
     )
+    run_check_pose(runtime_options)
 
 
 if __name__ == "__main__":

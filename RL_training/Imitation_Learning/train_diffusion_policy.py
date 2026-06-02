@@ -17,10 +17,6 @@ def resolve_dataset_dir(path: str) -> Path:
     dataset_dir = Path(path)
     if dataset_dir.exists():
         return dataset_dir
-    fallback = Path("data")
-    if path == "dataset/raw" and fallback.exists():
-        print("dataset/raw not found; using existing data/ directory.")
-        return fallback
     return dataset_dir
 
 
@@ -33,8 +29,8 @@ def make_schedule(timesteps: int, device: torch.device):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", default="dataset/raw")
-    parser.add_argument("--checkpoint-dir", default="logs/diffusion_policy/checkpoints")
+    parser.add_argument("--dataset", default="data/processed/real_robot/training_episodes")
+    parser.add_argument("--checkpoint-dir", default="data/checkpoints/diffusion_policy")
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--lr", type=float, default=1e-4)
@@ -50,7 +46,7 @@ def main():
         dataset_dir,
         obs_horizon=args.obs_horizon,
         pred_horizon=args.pred_horizon,
-        processed_dir=Path("dataset/processed"),
+        processed_dir=Path("data/processed/real_robot/stats"),
     )
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=False)
 
@@ -73,6 +69,8 @@ def main():
         "state_dim": stats["state_dim"],
         "action_dim": stats["action_dim"],
     }
+
+    loss_history = []
 
     for epoch in range(1, args.epochs + 1):
         model.train()
@@ -100,6 +98,7 @@ def main():
             total_count += batch_size
 
         avg_loss = total_loss / max(total_count, 1)
+        loss_history.append(avg_loss)
         print(f"epoch {epoch:03d} loss {avg_loss:.6f}")
 
     checkpoint_dir = Path(args.checkpoint_dir)
@@ -110,6 +109,7 @@ def main():
             "model_state_dict": model.state_dict(),
             "stats": stats,
             "config": config,
+            "loss_history": loss_history,
         },
         checkpoint_path,
     )
