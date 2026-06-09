@@ -16,6 +16,7 @@ from launch.substitutions import (
     LaunchConfiguration,
 )
 from launch_ros.actions import Node, SetParameter
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
 import os, yaml
@@ -75,6 +76,11 @@ def launch_setup(context: LaunchContext):
         "urdf",
         "humanoid.urdf.xacro"
     ])
+    srdf_path = PathJoinSubstitution([
+        FindPackageShare("robot_moveit_config"),
+        "config",
+        "humanoid.srdf"
+    ])
     
     world_file = PathJoinSubstitution([
         pkg_share,
@@ -93,6 +99,17 @@ def launch_setup(context: LaunchContext):
     ])
     
     rviz2_parameters = [
+        {
+            "robot_description": ParameterValue(
+                Command(['xacro ', xacro_path, " use_gazebo:=true"]),
+                value_type=str,
+            ),
+            "robot_description_semantic": ParameterValue(
+                Command(['cat ', srdf_path]),
+                value_type=str,
+            ),
+            "use_sim_time": True,
+        },
         moveit_config.planning_pipelines,
         moveit_config.robot_description_kinematics,
         moveit_config.joint_limits,
@@ -260,6 +277,7 @@ def launch_setup(context: LaunchContext):
             '/head_camera/image@sensor_msgs/msg/Image[ignition.msgs.Image',
             '/head_camera/depth_image@sensor_msgs/msg/Image[ignition.msgs.Image',
             '/head_camera/points@sensor_msgs/msg/PointCloud2[ignition.msgs.PointCloudPacked',
+            '/pusher/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
         ],
         output='screen'
     )
@@ -289,12 +307,13 @@ def launch_setup(context: LaunchContext):
             FindPackageShare('robot_moveit_config'),
             '/launch/move_group.launch.py'
         ]),
+        launch_arguments={'use_sim_time': 'true'}.items(),
     )
     
     moveit_servo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
-            FindPackageShare('servo_control'),
-            '/launch/servo.launch.py'
+            FindPackageShare('robot_servo_control'),
+            '/launch/servo_control.launch.py'
         ]),
     )
     

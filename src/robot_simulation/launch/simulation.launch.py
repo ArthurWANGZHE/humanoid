@@ -16,8 +16,8 @@ from launch.substitutions import (
     LaunchConfiguration,
 )
 from launch_ros.actions import Node, SetParameter
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
-from ament_index_python.packages import get_package_share_directory
 import os
 
 def launch_setup(context: LaunchContext):
@@ -32,18 +32,15 @@ def launch_setup(context: LaunchContext):
     
     # World file (default: empty.sdf)
     world_file_arg = LaunchConfiguration('world').perform(context)
-    if world_file_arg == 'empty.sdf' or world_file_arg.startswith('worlds/'):
-        world_file = PathJoinSubstitution([
-            pkg_simulation, "worlds", "empty.sdf"
-        ])
+    if os.path.isabs(world_file_arg):
+        world_file = world_file_arg
     else:
-        # Allow absolute paths or custom filenames
-        if os.path.isabs(world_file_arg):
-            world_file = world_file_arg
-        else:
-            world_file = PathJoinSubstitution([
-                pkg_simulation, "worlds", world_file_arg
-            ])
+        world_name = world_file_arg
+        if world_name.startswith('worlds/'):
+            world_name = world_name[len('worlds/'):]
+        world_file = PathJoinSubstitution([
+            pkg_simulation, "worlds", world_name
+        ])
     
     # Component enable/disable flags (all default to True)
     enable_moveit = LaunchConfiguration('moveit').perform(context).lower() == 'true'
@@ -51,6 +48,7 @@ def launch_setup(context: LaunchContext):
     enable_rviz_cmd = LaunchConfiguration('rviz_cmd').perform(context).lower() == 'true'
     enable_rqt = LaunchConfiguration('rqt').perform(context).lower() == 'true'
     enable_topic_bridge = LaunchConfiguration('topic_bridge').perform(context).lower() == 'true'
+    enable_servo = LaunchConfiguration('servo').perform(context).lower() == 'true'
     
     # Controller enable flags
     enable_neck = LaunchConfiguration('neck').perform(context).lower() == 'true'
@@ -62,6 +60,26 @@ def launch_setup(context: LaunchContext):
     # ============ 3. Paths ============
     xacro_path = PathJoinSubstitution([
         pkg_description, "urdf", "humanoid.urdf.xacro"
+    ])
+    initial_positions_arg = LaunchConfiguration('initial_positions_file').perform(context)
+    if os.path.isabs(initial_positions_arg):
+        initial_positions_file = initial_positions_arg
+    else:
+        initial_positions_name = initial_positions_arg
+        if initial_positions_name.startswith('config/'):
+            initial_positions_name = initial_positions_name[len('config/'):]
+        initial_positions_file = PathJoinSubstitution([
+            pkg_description, "config", initial_positions_name
+        ])
+    robot_description_command = Command([
+        'xacro ',
+        xacro_path,
+        " use_gazebo:=true",
+        " initial_positions_file:=",
+        initial_positions_file,
+    ])
+    srdf_path = PathJoinSubstitution([
+        pkg_moveit, "config", "humanoid.srdf"
     ])
     
     rviz_sim_config = PathJoinSubstitution([
@@ -105,8 +123,7 @@ def launch_setup(context: LaunchContext):
         name="robot_state_publisher",
         output="screen",
         parameters=[{
-            "robot_description": Command([
-                'xacro ', xacro_path, " use_gazebo:=true"]),
+            "robot_description": robot_description_command,
             "publish_frequency": 1000.0,
             "use_sim_time": True,
         }]
@@ -119,9 +136,27 @@ def launch_setup(context: LaunchContext):
         arguments=[
             "-name", "humanoid",
             "-topic", "/robot_description",
-            "-z", "0.1",
+            "-z", "0.9",
             "-x", "0",
-            "-y", "0"
+            "-y", "0",
+            "-Y", "1.5708",
+        ],
+        output="screen"
+    )
+
+    # Keep RViz/MoveIt's fixed world frame aligned with the Gazebo spawn pose.
+    static_tf_world_to_base = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        arguments=[
+            "--x", "0",
+            "--y", "0",
+            "--z", "0.9",
+            "--yaw", "1.5708",
+            "--pitch", "0",
+            "--roll", "0",
+            "--frame-id", "world",
+            "--child-frame-id", "base_link",
         ],
         output="screen"
     )
@@ -140,27 +175,24 @@ def launch_setup(context: LaunchContext):
             '/head_camera/image@sensor_msgs/msg/Image[ignition.msgs.Image',
             '/head_camera/depth_image@sensor_msgs/msg/Image[ignition.msgs.Image',
             '/head_camera/points@sensor_msgs/msg/PointCloud2[ignition.msgs.PointCloudPacked',
+            '/pusher/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
         ],
         output='screen',
         parameters=[{'use_sim_time': True}]
     )
     
-    # ============ 7. Controller Manager ============
-    controller_manager = Node(
-        package="controller_manager",
-        executable="ros2_control_node",
-        parameters=[
-            {"robot_description": Command(['xacro ', xacro_path, " use_gazebo:=true"])},
-            PathJoinSubstitution([pkg_description, "config", "ros2_controllers.yaml"])
-        ],
-        output="screen"
-    )
-    
-    # Controller spawners
+    # ============ 7. Controller Spawners ============
+    # Gazebo loads gz_ros2_control from the robot xacro and provides /controller_manager.
+    # Do not start a second ros2_control_node here; it races the Gazebo controller manager.
     joint_state_broadcaster = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
+        arguments=[
+            "joint_state_broadcaster",
+            "--controller-manager", "/controller_manager",
+            "--controller-manager-timeout", "40",
+            "--service-call-timeout", "40",
+        ],
         output="screen"
     )
     
@@ -172,7 +204,12 @@ def launch_setup(context: LaunchContext):
             Node(
                 package="controller_manager",
                 executable="spawner",
-                arguments=["neck_controller", "--controller-manager", "/controller_manager"],
+                arguments=[
+                    "neck_controller",
+                    "--controller-manager", "/controller_manager",
+                    "--controller-manager-timeout", "40",
+                    "--service-call-timeout", "40",
+                ],
                 output="screen"
             )
         )
@@ -182,7 +219,12 @@ def launch_setup(context: LaunchContext):
             Node(
                 package="controller_manager",
                 executable="spawner",
-                arguments=["right_arm_controller", "--controller-manager", "/controller_manager"],
+                arguments=[
+                    "right_arm_controller",
+                    "--controller-manager", "/controller_manager",
+                    "--controller-manager-timeout", "40",
+                    "--service-call-timeout", "40",
+                ],
                 output="screen"
             )
         )
@@ -192,7 +234,12 @@ def launch_setup(context: LaunchContext):
             Node(
                 package="controller_manager",
                 executable="spawner",
-                arguments=["left_arm_controller", "--controller-manager", "/controller_manager"],
+                arguments=[
+                    "left_arm_controller",
+                    "--controller-manager", "/controller_manager",
+                    "--controller-manager-timeout", "40",
+                    "--service-call-timeout", "40",
+                ],
                 output="screen"
             )
         )
@@ -202,7 +249,12 @@ def launch_setup(context: LaunchContext):
             Node(
                 package="controller_manager",
                 executable="spawner",
-                arguments=["right_gripper_controller", "--controller-manager", "/controller_manager"],
+                arguments=[
+                    "right_gripper_controller",
+                    "--controller-manager", "/controller_manager",
+                    "--controller-manager-timeout", "40",
+                    "--service-call-timeout", "40",
+                ],
                 output="screen"
             )
         )
@@ -212,7 +264,12 @@ def launch_setup(context: LaunchContext):
             Node(
                 package="controller_manager",
                 executable="spawner",
-                arguments=["left_gripper_controller", "--controller-manager", "/controller_manager"],
+                arguments=[
+                    "left_gripper_controller",
+                    "--controller-manager", "/controller_manager",
+                    "--controller-manager-timeout", "40",
+                    "--service-call-timeout", "40",
+                ],
                 output="screen"
             )
         )
@@ -223,6 +280,13 @@ def launch_setup(context: LaunchContext):
             pkg_moveit, '/launch/move_group.launch.py'
         ]),
         launch_arguments={'use_sim_time': 'true'}.items()
+    )
+
+    moveit_servo = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            FindPackageShare('robot_servo_control'),
+            '/launch/servo_control.launch.py'
+        ])
     )
     
     # ============ 9. Commander Node ============
@@ -242,7 +306,17 @@ def launch_setup(context: LaunchContext):
         name="rviz2_simulation",
         output="screen",
         arguments=["-d", rviz_sim_config],
-        parameters=[{'use_sim_time': True}]
+        parameters=[{
+            "robot_description": ParameterValue(
+                robot_description_command,
+                value_type=str,
+            ),
+            "robot_description_semantic": ParameterValue(
+                Command(['cat ', srdf_path]),
+                value_type=str,
+            ),
+            "use_sim_time": True,
+        }]
     )
     
     rviz_cmd = Node(
@@ -251,7 +325,17 @@ def launch_setup(context: LaunchContext):
         name="rviz2_commander",
         output="screen",
         arguments=["-d", rviz_cmd_config],
-        parameters=[{'use_sim_time': True}]
+        parameters=[{
+            "robot_description": ParameterValue(
+                robot_description_command,
+                value_type=str,
+            ),
+            "robot_description_semantic": ParameterValue(
+                Command(['cat ', srdf_path]),
+                value_type=str,
+            ),
+            "use_sim_time": True,
+        }]
     )
     
     rqt = Node(
@@ -294,8 +378,8 @@ def launch_setup(context: LaunchContext):
         set_resource_path,
         gz_sim,
         robot_state_publisher,
+        static_tf_world_to_base,
         spawn_entity,
-        controller_manager,
         load_joint_state_broadcaster,
     ]
     
@@ -310,6 +394,9 @@ def launch_setup(context: LaunchContext):
     
     if enable_moveit:
         optional_nodes.append(moveit)
+
+    if enable_servo:
+        optional_nodes.append(moveit_servo)
 
         # Add commander node (using the same 'commander' argument)
     if LaunchConfiguration('commander').perform(context).lower() == 'true':
@@ -344,12 +431,24 @@ def generate_launch_description():
             default_value='empty.sdf',
             description='World file name (in robot_simulation/worlds/) or absolute path'
         ),
+
+        DeclareLaunchArgument(
+            'initial_positions_file',
+            default_value='initial_positions.yaml',
+            description='Initial positions YAML in robot_description/config/ or absolute path'
+        ),
         
         # Component enable/disable flags (all default to True)
         DeclareLaunchArgument(
             'moveit',
             default_value='true',
             description='Enable MoveIt'
+        ),
+
+        DeclareLaunchArgument(
+            'servo',
+            default_value='true',
+            description='Enable MoveIt Servo'
         ),
         
         DeclareLaunchArgument(

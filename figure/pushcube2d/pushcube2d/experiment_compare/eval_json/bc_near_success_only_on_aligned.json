@@ -1,0 +1,716 @@
+{
+  "label": "bc_near_success_only",
+  "model": "models\\pushcube2d\\bc_near_success_only.npz",
+  "train_reset_mode": "near",
+  "train_variant": "success_only",
+  "eval_reset_mode": "aligned",
+  "seed": 1000,
+  "aggregate": {
+    "success_rate": 1.0,
+    "mean_final_distance": 0.03783128133043647,
+    "mean_length": 13.94,
+    "episodes": 100
+  },
+  "episodes": [
+    {
+      "episode": 0,
+      "seed": 1000,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.05460749939084053
+    },
+    {
+      "episode": 1,
+      "seed": 1001,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.054380908608436584
+    },
+    {
+      "episode": 2,
+      "seed": 1002,
+      "length": 16,
+      "success": true,
+      "final_distance": 0.026398884132504463
+    },
+    {
+      "episode": 3,
+      "seed": 1003,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.04659482091665268
+    },
+    {
+      "episode": 4,
+      "seed": 1004,
+      "length": 14,
+      "success": true,
+      "final_distance": 0.02546643279492855
+    },
+    {
+      "episode": 5,
+      "seed": 1005,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.042328450828790665
+    },
+    {
+      "episode": 6,
+      "seed": 1006,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.041737768799066544
+    },
+    {
+      "episode": 7,
+      "seed": 1007,
+      "length": 18,
+      "success": true,
+      "final_distance": 0.03743171691894531
+    },
+    {
+      "episode": 8,
+      "seed": 1008,
+      "length": 14,
+      "success": true,
+      "final_distance": 0.02588360384106636
+    },
+    {
+      "episode": 9,
+      "seed": 1009,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.027698660269379616
+    },
+    {
+      "episode": 10,
+      "seed": 1010,
+      "length": 20,
+      "success": true,
+      "final_distance": 0.03912470489740372
+    },
+    {
+      "episode": 11,
+      "seed": 1011,
+      "length": 12,
+      "success": true,
+      "final_distance": 0.05451107770204544
+    },
+    {
+      "episode": 12,
+      "seed": 1012,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.029750065878033638
+    },
+    {
+      "episode": 13,
+      "seed": 1013,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.032566145062446594
+    },
+    {
+      "episode": 14,
+      "seed": 1014,
+      "length": 18,
+      "success": true,
+      "final_distance": 0.026390956714749336
+    },
+    {
+      "episode": 15,
+      "seed": 1015,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.041564494371414185
+    },
+    {
+      "episode": 16,
+      "seed": 1016,
+      "length": 14,
+      "success": true,
+      "final_distance": 0.030955584719777107
+    },
+    {
+      "episode": 17,
+      "seed": 1017,
+      "length": 14,
+      "success": true,
+      "final_distance": 0.03923085331916809
+    },
+    {
+      "episode": 18,
+      "seed": 1018,
+      "length": 16,
+      "success": true,
+      "final_distance": 0.04146815836429596
+    },
+    {
+      "episode": 19,
+      "seed": 1019,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.05380011349916458
+    },
+    {
+      "episode": 20,
+      "seed": 1020,
+      "length": 9,
+      "success": true,
+      "final_distance": 0.05241535231471062
+    },
+    {
+      "episode": 21,
+      "seed": 1021,
+      "length": 17,
+      "success": true,
+      "final_distance": 0.048141516745090485
+    },
+    {
+      "episode": 22,
+      "seed": 1022,
+      "length": 17,
+      "success": true,
+      "final_distance": 0.024448180571198463
+    },
+    {
+      "episode": 23,
+      "seed": 1023,
+      "length": 17,
+      "success": true,
+      "final_distance": 0.03424310311675072
+    },
+    {
+      "episode": 24,
+      "seed": 1024,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.0479428805410862
+    },
+    {
+      "episode": 25,
+      "seed": 1025,
+      "length": 10,
+      "success": true,
+      "final_distance": 0.03742671012878418
+    },
+    {
+      "episode": 26,
+      "seed": 1026,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.024538543075323105
+    },
+    {
+      "episode": 27,
+      "seed": 1027,
+      "length": 18,
+      "success": true,
+      "final_distance": 0.03750796988606453
+    },
+    {
+      "episode": 28,
+      "seed": 1028,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.03353876248002052
+    },
+    {
+      "episode": 29,
+      "seed": 1029,
+      "length": 11,
+      "success": true,
+      "final_distance": 0.029060207307338715
+    },
+    {
+      "episode": 30,
+      "seed": 1030,
+      "length": 17,
+      "success": true,
+      "final_distance": 0.04723217338323593
+    },
+    {
+      "episode": 31,
+      "seed": 1031,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.04113687574863434
+    },
+    {
+      "episode": 32,
+      "seed": 1032,
+      "length": 16,
+      "success": true,
+      "final_distance": 0.031742654740810394
+    },
+    {
+      "episode": 33,
+      "seed": 1033,
+      "length": 14,
+      "success": true,
+      "final_distance": 0.04244529828429222
+    },
+    {
+      "episode": 34,
+      "seed": 1034,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.03515544533729553
+    },
+    {
+      "episode": 35,
+      "seed": 1035,
+      "length": 18,
+      "success": true,
+      "final_distance": 0.03464096039533615
+    },
+    {
+      "episode": 36,
+      "seed": 1036,
+      "length": 16,
+      "success": true,
+      "final_distance": 0.03213772177696228
+    },
+    {
+      "episode": 37,
+      "seed": 1037,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.03663518279790878
+    },
+    {
+      "episode": 38,
+      "seed": 1038,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.050403013825416565
+    },
+    {
+      "episode": 39,
+      "seed": 1039,
+      "length": 12,
+      "success": true,
+      "final_distance": 0.037816256284713745
+    },
+    {
+      "episode": 40,
+      "seed": 1040,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.028289442881941795
+    },
+    {
+      "episode": 41,
+      "seed": 1041,
+      "length": 14,
+      "success": true,
+      "final_distance": 0.025051657110452652
+    },
+    {
+      "episode": 42,
+      "seed": 1042,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.04353336617350578
+    },
+    {
+      "episode": 43,
+      "seed": 1043,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.05382366478443146
+    },
+    {
+      "episode": 44,
+      "seed": 1044,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.03939514234662056
+    },
+    {
+      "episode": 45,
+      "seed": 1045,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.0332680344581604
+    },
+    {
+      "episode": 46,
+      "seed": 1046,
+      "length": 17,
+      "success": true,
+      "final_distance": 0.025518570095300674
+    },
+    {
+      "episode": 47,
+      "seed": 1047,
+      "length": 12,
+      "success": true,
+      "final_distance": 0.028809580951929092
+    },
+    {
+      "episode": 48,
+      "seed": 1048,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.03506455942988396
+    },
+    {
+      "episode": 49,
+      "seed": 1049,
+      "length": 17,
+      "success": true,
+      "final_distance": 0.0285173412412405
+    },
+    {
+      "episode": 50,
+      "seed": 1050,
+      "length": 17,
+      "success": true,
+      "final_distance": 0.03559102863073349
+    },
+    {
+      "episode": 51,
+      "seed": 1051,
+      "length": 9,
+      "success": true,
+      "final_distance": 0.05415264889597893
+    },
+    {
+      "episode": 52,
+      "seed": 1052,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.039715979248285294
+    },
+    {
+      "episode": 53,
+      "seed": 1053,
+      "length": 14,
+      "success": true,
+      "final_distance": 0.028166355565190315
+    },
+    {
+      "episode": 54,
+      "seed": 1054,
+      "length": 16,
+      "success": true,
+      "final_distance": 0.03015730157494545
+    },
+    {
+      "episode": 55,
+      "seed": 1055,
+      "length": 12,
+      "success": true,
+      "final_distance": 0.04194271191954613
+    },
+    {
+      "episode": 56,
+      "seed": 1056,
+      "length": 11,
+      "success": true,
+      "final_distance": 0.041149966418743134
+    },
+    {
+      "episode": 57,
+      "seed": 1057,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.04108371213078499
+    },
+    {
+      "episode": 58,
+      "seed": 1058,
+      "length": 17,
+      "success": true,
+      "final_distance": 0.031546514481306076
+    },
+    {
+      "episode": 59,
+      "seed": 1059,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.036371443420648575
+    },
+    {
+      "episode": 60,
+      "seed": 1060,
+      "length": 14,
+      "success": true,
+      "final_distance": 0.031097853556275368
+    },
+    {
+      "episode": 61,
+      "seed": 1061,
+      "length": 12,
+      "success": true,
+      "final_distance": 0.023305943235754967
+    },
+    {
+      "episode": 62,
+      "seed": 1062,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.04471784085035324
+    },
+    {
+      "episode": 63,
+      "seed": 1063,
+      "length": 10,
+      "success": true,
+      "final_distance": 0.03571774438023567
+    },
+    {
+      "episode": 64,
+      "seed": 1064,
+      "length": 12,
+      "success": true,
+      "final_distance": 0.031486790627241135
+    },
+    {
+      "episode": 65,
+      "seed": 1065,
+      "length": 14,
+      "success": true,
+      "final_distance": 0.03681640326976776
+    },
+    {
+      "episode": 66,
+      "seed": 1066,
+      "length": 11,
+      "success": true,
+      "final_distance": 0.02694462612271309
+    },
+    {
+      "episode": 67,
+      "seed": 1067,
+      "length": 8,
+      "success": true,
+      "final_distance": 0.03184932842850685
+    },
+    {
+      "episode": 68,
+      "seed": 1068,
+      "length": 9,
+      "success": true,
+      "final_distance": 0.043289363384246826
+    },
+    {
+      "episode": 69,
+      "seed": 1069,
+      "length": 12,
+      "success": true,
+      "final_distance": 0.054172273725271225
+    },
+    {
+      "episode": 70,
+      "seed": 1070,
+      "length": 12,
+      "success": true,
+      "final_distance": 0.04113457724452019
+    },
+    {
+      "episode": 71,
+      "seed": 1071,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.04539063945412636
+    },
+    {
+      "episode": 72,
+      "seed": 1072,
+      "length": 16,
+      "success": true,
+      "final_distance": 0.03194255009293556
+    },
+    {
+      "episode": 73,
+      "seed": 1073,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.03071911819279194
+    },
+    {
+      "episode": 74,
+      "seed": 1074,
+      "length": 16,
+      "success": true,
+      "final_distance": 0.03358599171042442
+    },
+    {
+      "episode": 75,
+      "seed": 1075,
+      "length": 12,
+      "success": true,
+      "final_distance": 0.044689882546663284
+    },
+    {
+      "episode": 76,
+      "seed": 1076,
+      "length": 16,
+      "success": true,
+      "final_distance": 0.05183741822838783
+    },
+    {
+      "episode": 77,
+      "seed": 1077,
+      "length": 12,
+      "success": true,
+      "final_distance": 0.033432796597480774
+    },
+    {
+      "episode": 78,
+      "seed": 1078,
+      "length": 8,
+      "success": true,
+      "final_distance": 0.0493851974606514
+    },
+    {
+      "episode": 79,
+      "seed": 1079,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.04246944561600685
+    },
+    {
+      "episode": 80,
+      "seed": 1080,
+      "length": 11,
+      "success": true,
+      "final_distance": 0.0484774149954319
+    },
+    {
+      "episode": 81,
+      "seed": 1081,
+      "length": 15,
+      "success": true,
+      "final_distance": 0.02500612661242485
+    },
+    {
+      "episode": 82,
+      "seed": 1082,
+      "length": 12,
+      "success": true,
+      "final_distance": 0.05013606324791908
+    },
+    {
+      "episode": 83,
+      "seed": 1083,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.03207678720355034
+    },
+    {
+      "episode": 84,
+      "seed": 1084,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.024996157735586166
+    },
+    {
+      "episode": 85,
+      "seed": 1085,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.02570262923836708
+    },
+    {
+      "episode": 86,
+      "seed": 1086,
+      "length": 18,
+      "success": true,
+      "final_distance": 0.036099690943956375
+    },
+    {
+      "episode": 87,
+      "seed": 1087,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.03185195475816727
+    },
+    {
+      "episode": 88,
+      "seed": 1088,
+      "length": 16,
+      "success": true,
+      "final_distance": 0.05319024249911308
+    },
+    {
+      "episode": 89,
+      "seed": 1089,
+      "length": 17,
+      "success": true,
+      "final_distance": 0.05225948244333267
+    },
+    {
+      "episode": 90,
+      "seed": 1090,
+      "length": 11,
+      "success": true,
+      "final_distance": 0.03887895867228508
+    },
+    {
+      "episode": 91,
+      "seed": 1091,
+      "length": 17,
+      "success": true,
+      "final_distance": 0.0377328097820282
+    },
+    {
+      "episode": 92,
+      "seed": 1092,
+      "length": 17,
+      "success": true,
+      "final_distance": 0.03423033282160759
+    },
+    {
+      "episode": 93,
+      "seed": 1093,
+      "length": 14,
+      "success": true,
+      "final_distance": 0.025981396436691284
+    },
+    {
+      "episode": 94,
+      "seed": 1094,
+      "length": 11,
+      "success": true,
+      "final_distance": 0.05327656865119934
+    },
+    {
+      "episode": 95,
+      "seed": 1095,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.03187171742320061
+    },
+    {
+      "episode": 96,
+      "seed": 1096,
+      "length": 9,
+      "success": true,
+      "final_distance": 0.04889838024973869
+    },
+    {
+      "episode": 97,
+      "seed": 1097,
+      "length": 13,
+      "success": true,
+      "final_distance": 0.03279591351747513
+    },
+    {
+      "episode": 98,
+      "seed": 1098,
+      "length": 16,
+      "success": true,
+      "final_distance": 0.03959185630083084
+    },
+    {
+      "episode": 99,
+      "seed": 1099,
+      "length": 16,
+      "success": true,
+      "final_distance": 0.04443913325667381
+    }
+  ]
+}

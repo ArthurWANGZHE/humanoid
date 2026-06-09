@@ -1,0 +1,8 @@
+numpy>=1.23
+matplotlib>=3.7
+pygame>=2.5
+gymnasium>=0.29
+imageio>=2.31
+imageio-ffmpeg>=0.4
+tensorboard>=2.14
+tensorboardX>=2.6

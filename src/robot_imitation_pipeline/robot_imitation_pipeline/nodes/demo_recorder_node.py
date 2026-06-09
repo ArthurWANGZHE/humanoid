@@ -92,7 +92,7 @@ class DemoRecorder(Node):
             self.camera_topic,
             self._image_cb,
             sensor_qos,
-        )
+        ) if self.required_cameras else None
 
         self.start_srv = self.create_service(Trigger, "~/start", self._start_cb)
         self.stop_srv = self.create_service(SetBool, "~/stop", self._stop_cb)
@@ -101,7 +101,10 @@ class DemoRecorder(Node):
 
         self.get_logger().info("Demo recorder ready.")
         self.get_logger().info(f"Save root: {self.save_root}")
-        self.get_logger().info(f"Primary camera: {self.camera_name} -> {self.camera_topic}")
+        if self.required_cameras:
+            self.get_logger().info(f"Primary camera: {self.camera_name} -> {self.camera_topic}")
+        else:
+            self.get_logger().info("Camera recording disabled. Recording joint data only.")
 
     def _declare_parameters(self) -> None:
         string_array_desc = ParameterDescriptor(type=ParameterType.PARAMETER_STRING_ARRAY)
@@ -180,12 +183,12 @@ class DemoRecorder(Node):
         )
         self.declare_parameter(
             "required_cameras",
-            ["right_wrist_camera"],
+            [],
             string_array_desc,
         )
         self.declare_parameter(
             "optional_cameras",
-            ["head_camera"],
+            [],
             string_array_desc,
         )
         self.declare_parameter(
@@ -203,8 +206,8 @@ class DemoRecorder(Node):
         )
         self.declare_parameter("right_wrist_camera_image_topic", "")
         self.declare_parameter("right_wrist_camera_info_topic", "")
-        self.declare_parameter("head_camera_image_topic", "")
-        self.declare_parameter("head_camera_info_topic", "")
+        # self.declare_parameter("head_camera_image_topic", "")
+        # self.declare_parameter("head_camera_info_topic", "")
         self.declare_parameter("camera_name", "right_wrist_camera")
         self.declare_parameter("camera_topic", "/right_wrist_camera/image_raw")
 
@@ -262,19 +265,19 @@ class DemoRecorder(Node):
         self.optional_cameras = list(self.get_parameter("optional_cameras").value)
         right_wrist_camera_image_topic = str(self.get_parameter("right_wrist_camera_image_topic").value)
         right_wrist_camera_info_topic = str(self.get_parameter("right_wrist_camera_info_topic").value)
-        head_camera_image_topic = str(self.get_parameter("head_camera_image_topic").value)
-        head_camera_info_topic = str(self.get_parameter("head_camera_info_topic").value)
+        # head_camera_image_topic = str(self.get_parameter("head_camera_image_topic").value)
+        # head_camera_info_topic = str(self.get_parameter("head_camera_info_topic").value)
         self.camera_topics = {
             "right_wrist_camera": {
                 "image": right_wrist_camera_image_topic or str(self.get_parameter("camera_topic").value),
                 "camera_info": right_wrist_camera_info_topic or "/right_wrist_camera/camera_info",
                 "required": "right_wrist_camera" in self.required_cameras,
             },
-            "head_camera": {
-                "image": head_camera_image_topic or "/camera/camera/color/image_raw",
-                "camera_info": head_camera_info_topic or "/camera/camera/color/camera_info",
-                "required": "head_camera" in self.required_cameras,
-            },
+            # "head_camera": {
+            #     "image": head_camera_image_topic or "/camera/camera/color/image_raw",
+            #     "camera_info": head_camera_info_topic or "/camera/camera/color/camera_info",
+            #     "required": "head_camera" in self.required_cameras,
+            # },
         }
         self.camera_name = "right_wrist_camera"
         self.camera_topic = self.camera_topics[self.camera_name]["image"]
@@ -434,12 +437,21 @@ class DemoRecorder(Node):
         action = np.concatenate([self.latest_action[6:12], self.latest_action[15:16]], axis=0)
         action_valid = np.concatenate([self.latest_action_valid[6:12], self.latest_action_valid[15:16]], axis=0)
         frame_index = len(self.samples)
-        image_rel_path = self._save_step_image(frame_index)
+
+        # Save image only if camera data is available
+        image_rel_path = ""
+        has_image = self.camera_name in self.latest_images
+        if has_image:
+            image_rel_path = self._save_step_image(frame_index)
+
+        image_ts = self.latest_image_wall_times.get(self.camera_name, 0.0)
+        image_ros_ts = self.latest_image_ros_times.get(self.camera_name, 0.0)
+
         sample = {
             "timestamp": np.asarray(now_to_float(self.get_clock()), dtype=np.float64),
             "joint_state_timestamp": np.asarray(self.latest_joint_state_time, dtype=np.float64),
-            "image_timestamp": np.asarray(self.latest_image_wall_times[self.camera_name], dtype=np.float64),
-            "image_ros_timestamp": np.asarray(self.latest_image_ros_times[self.camera_name], dtype=np.float64),
+            "image_timestamp": np.asarray(image_ts, dtype=np.float64),
+            "image_ros_timestamp": np.asarray(image_ros_ts, dtype=np.float64),
             "joint_pos": joint_pos,
             "joint_vel": joint_vel,
             "action_legacy": self.latest_action.copy(),
@@ -460,8 +472,9 @@ class DemoRecorder(Node):
             missing.append("joint state missing")
         if not self.latest_action_valid[6:12].all():
             missing.append("action command missing")
-        if self.camera_name not in self.latest_images:
-            missing.append("camera image missing")
+        # Camera image is no longer required for joint-only recording
+        # if self.camera_name not in self.latest_images:
+        #     missing.append("camera image missing")
         if not self.latest_action_valid[15]:
             missing.append("gripper command/status missing")
         return missing
@@ -611,8 +624,10 @@ class DemoRecorder(Node):
             self.joint_state_topic,
             self.right_joint_command_topic,
             self.right_gripper_topic,
-            self.camera_topic,
         ]
+        # Only check camera topic if camera is required
+        if self.required_cameras:
+            topics.append(self.camera_topic)
         for topic in topics:
             last = self.topic_wall_times.get(topic)
             if last is None:
@@ -626,8 +641,9 @@ class DemoRecorder(Node):
             return
         min_rates = {
             self.joint_state_topic: self.min_joint_state_hz,
-            self.camera_topic: self.min_camera_hz,
         }
+        if self.required_cameras:
+            min_rates[self.camera_topic] = self.min_camera_hz
         for topic, min_rate in min_rates.items():
             count = self.topic_message_counts.get(topic, 0)
             last_count = self.last_rate_check_counts.get(topic, 0)
